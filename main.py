@@ -5,9 +5,11 @@ if __name__ == '__main__':
     student2 = StudentAcc("john")
     student3 = StudentAcc("lucas")
 
-    tutor1 = TutorAcc("bond")
+    tutor1 = TutorAcc("bond", ["algebra", "c++", "python"])
 
-    testMeet = Meeting(tutor1, 1, 2, 2025, 7, 30)
+    tempString = "2025-07-04 8:01 pm"
+
+    testMeet = Meeting(tutor1, tempString)
     testMeet.add_student(student1)
     testMeet.add_student(student2)
     testMeet.add_student(student3)
@@ -15,7 +17,7 @@ if __name__ == '__main__':
 
     testMeet.print_details()
 
-    testMonth = Month(6, 2025)
+    testMonth = Month(7, 2025)
     testMonth.print_self()
 
-    # just a testing file for now, will eventually house more functions relating to html
+    # just a debug file for now, will eventually house more functions connecting to html
