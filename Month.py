@@ -1,6 +1,6 @@
 import calendar
 from datetime import datetime
-from meetings import Meeting
+from Meetings import Meeting
 
 CONST_MONTHS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 CONST_DAYS = {

@@ -7,25 +7,26 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from flask_pymongo import PyMongo
 
 from UserLogin import UserLogin
-from meetings import *
-from month import Month
+from Meetings import *
+from Month import Month
+from UserAccount import UserAcc
 from UserCreator import UserCreator
 
 
 def run_demo():
-    student1 = StudentAcc("james")
-    student2 = StudentAcc("john")
-    student3 = StudentAcc("lucas")
+    student1 = UserAcc("james", "james@gmail.com", 0, [])
+    student2 = UserAcc("john", "john@gmail.com", 0, [])
+    student3 = UserAcc("lucas", "lucas@gmail.com", 0, [])
 
-    tutor1 = TutorAcc("bond", ["algebra", "c++", "python"])
+    tutor1 = UserAcc("bond", "bond@ufl.edu", 1, [], ["algebra", "c++", "python"])
 
     tempString = "2025-07-04 8:01 pm"
 
-    testMeet = Meeting(tutor1, tempString)
-    testMeet.add_student(student1)
-    testMeet.add_student(student2)
-    testMeet.add_student(student3)
-    testMeet.remove_student(student1)
+    testMeet = Meeting(tutor1.email, tempString, 60, 6, tutor1.subject_list)
+    testMeet.add_student(student1.email)
+    testMeet.add_student(student2.email)
+    testMeet.add_student(student3.email)
+    testMeet.remove_student(student1.email)
     testMeet.print_details()
 
     testMonth = Month(7, 2025)
@@ -48,6 +49,7 @@ def run_demo():
     else:
         print("Invalid Credentials")
 
+
 # --- Flask App and frontend Integration ---
 class RegistrationForm(FlaskForm):
     name = StringField('Full Name', validators=[DataRequired(), Length(min=2, max=50)])
@@ -58,10 +60,12 @@ class RegistrationForm(FlaskForm):
     subjects = StringField('Subjects (comma-separated)')
     submit = SubmitField('Register')
 
+
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key')
@@ -72,6 +76,7 @@ csrf = CSRFProtect(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+
 class User(UserMixin):
     def __init__(self, user_doc):
         self.id = str(user_doc['_id'])
@@ -79,14 +84,17 @@ class User(UserMixin):
         self.email = user_doc['email']
         self.role = user_doc['role']
 
+
 @login_manager.user_loader
 def load_user(user_id):
     doc = UserLogin.get_by_id(user_id)
     return User(doc) if doc else None
 
+
 @app.route('/')
 def index():
     return render_template('base.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -107,6 +115,7 @@ def register():
         flash(message, 'danger')
     return render_template('register.html', form=form)
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -120,11 +129,13 @@ def login():
         flash('Invalid credentials', 'danger')
     return render_template('login.html', form=form)
 
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     meetings = []
     return render_template('dashboard.html', meetings=meetings)
+
 
 @app.route('/logout')
 @login_required
@@ -132,6 +143,7 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+
 
 if __name__ == '__main__':
     run_demo()
