@@ -7,31 +7,13 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from flask_pymongo import PyMongo
 
 from UserLogin import UserLogin
-from Meetings import *
+from Meetings import MeetingObj
 from Month import Month
-from UserAccount import UserAcc
+from UserInstance import UserInstance
 from UserCreator import UserCreator
 
 
 def run_demo():
-    student1 = UserAcc("james", "james@gmail.com", 0, [])
-    student2 = UserAcc("john", "john@gmail.com", 0, [])
-    student3 = UserAcc("lucas", "lucas@gmail.com", 0, [])
-
-    tutor1 = UserAcc("bond", "bond@ufl.edu", 1, [], ["algebra", "c++", "python"])
-
-    tempString = "2025-07-04 8:01 pm"
-
-    testMeet = Meeting(tutor1.email, tempString, 60, 6, tutor1.subject_list)
-    testMeet.add_student(student1.email)
-    testMeet.add_student(student2.email)
-    testMeet.add_student(student3.email)
-    testMeet.remove_student(student1.email)
-    testMeet.print_details()
-
-    testMonth = Month(7, 2025)
-    testMonth.print_self()
-
     creator = UserCreator()
     print(creator.create_user(
         "Moises Sanchez",
@@ -40,12 +22,11 @@ def run_demo():
         "Student",
         ["Computer Science"]
     ))
-
     login = UserLogin()
     user_doc = login.login("Moises@testing.com", "Password123")
     if user_doc:
-        print(user_doc["name"])
-        print(user_doc["role"])
+        ourUser = UserInstance(user_doc["_id"])
+        ourUser.print_details()
     else:
         print("Invalid Credentials")
 
