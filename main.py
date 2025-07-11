@@ -1,4 +1,6 @@
 import os
+
+from bson import ObjectId
 from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_wtf import FlaskForm, CSRFProtect
 from wtforms import StringField, PasswordField, SubmitField, SelectField
@@ -32,22 +34,23 @@ def run_demo():
     testMonth = Month(7, 2025)
     testMonth.print_self()
 
-    creator = UserCreator()
-    print(creator.create_user(
+    student_creator = UserCreator()  # Creates user
+    print(student_creator.create_student_user(
         "Moises Sanchez",
         "Moises@testing.com",
         "Password123",
         "Student",
-        ["Computer Science"]
+        ["Computer Science"],
     ))
 
-    login = UserLogin()
-    user_doc = login.login("Moises@testing.com", "Password123")
-    if user_doc:
-        print(user_doc["name"])
-        print(user_doc["role"])
+    login = UserLogin()  # Logs in
+    user_doc = login.login("Moises@testing.com",
+                           "Password123")  # logins in with email and password as long as the user was created
+    if user_doc:  # If the user is logged in
+        print(user_doc["name"])  # then print the user than is logged in name
+        print(user_doc["role"])  # then print their role
     else:
-        print("Invalid Credentials")
+        print("Invalid Credentials")  # if the user is not logged in, then print "Invalid Credentials"
 
 
 # --- Flask App and frontend Integration ---
@@ -56,8 +59,27 @@ class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
-    role = SelectField('Account Type', choices=[('Student', 'Student'), ('Tutor', 'Tutor')], validators=[DataRequired()])
+    role = SelectField('Account Type', choices=[('Student', 'Student'), ('Tutor', 'Tutor')],
+                       validators=[DataRequired()])
+
+    # {% if form.role.data == 'Tutor' %}
     subjects = StringField('Subjects (comma-separated)')
+    sun_start = StringField('Sunday start')
+    sun_end = StringField('Sunday end')
+    mon_start = StringField('Monday start')
+    mon_end = StringField('Monday end')
+    tue_start = StringField('Tuesday start')
+    tue_end = StringField('Tuesday end')
+    wed_start = StringField('Wednesday start')
+    wed_end = StringField('Wednesday end')
+    thu_start = StringField('Thursday start')
+    thu_end = StringField('Thursday end')
+    fri_start = StringField('Friday start')
+    fri_end = StringField('Friday end')
+    sat_start = StringField('Saturday start')
+    sat_end = StringField('Saturday end')
+    # {% endif %}
+
     submit = SubmitField('Register')
 
 
@@ -87,10 +109,10 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    doc = UserLogin.get_by_id(user_id)
+    doc = UserLogin().users.find_one({"_id": ObjectId(user_id)})
     return User(doc) if doc else None
 
-
+b
 @app.route('/')
 def index():
     return render_template('base.html')
@@ -99,20 +121,54 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
+    success = False
+    message = ""
     if form.validate_on_submit():
         subjects = [s.strip() for s in form.subjects.data.split(',')] if form.subjects.data else []
+
         creator = UserCreator()
-        success, message = creator.create_user(
-            form.name.data,
-            form.email.data,
-            form.password.data,
-            form.role.data,
-            subjects
-        )
-        if success:
-            flash('Account created! Please log in.', 'success')
-            return redirect(url_for('login'))
+        if form.role.data == "Tutor":
+            raw_input = {
+                'sunday': [form.sun_start.data, form.sun_end.data],
+                'monday': [form.mon_start.data, form.mon_end.data],
+                'tuesday': [form.tue_start.data, form.tue_end.data],
+                'wednesday': [form.wed_start.data, form.wed_end.data],
+                'thursday': [form.thu_start.data, form.thu_end.data],
+                'friday': [form.fri_start.data, form.fri_end.data],
+                'saturday': [form.sat_start.data, form.sat_end.data]
+            }
+
+            availability = {}
+            for day, (start, end) in raw_input.items():
+                if start and end and end > start:
+                    availability[day] = (start, end)
+                else:
+                    availability[day] = None
+
+            success, message = creator.create_tutor_user(
+                form.name.data,
+                form.email.data,
+                form.password.data,
+                form.role.data,
+                subjects,
+                0,
+                availability
+            )
+        else:
+            success, message = creator.create_student_user(
+                form.name.data,
+                form.email.data,
+                form.password.data,
+                form.role.data,
+            )
+
+    if success:
+        flash('Account created! Please log in.', 'success')
+        return redirect(url_for('login'))
+    elif message:
         flash(message, 'danger')
+
+
     return render_template('register.html', form=form)
 
 
