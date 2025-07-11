@@ -33,13 +33,9 @@ class MeetingObj:
         created_raw = doc["createdAt"]
         self.createdAt = datetime.strptime(created_raw, FORMAT)
 
-    def print_details(self):  # debug function
+    def print_details(self):
         print(f"Meeting between {self.tutorID} and {self.studentID} on {self.scheduledTime.strftime(FORMAT)}")
-        # additional debug info can be added here if needed
 
-
-# stray debug print removed (would raise NameError)
-# print(f"Meeting between {self.tutorID} and {self.studentID} on {self.scheduledTime.strftime(FORMAT)}")
 
 
 def break_time(dictionary, day):
