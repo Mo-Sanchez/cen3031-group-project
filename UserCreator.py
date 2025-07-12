@@ -1,21 +1,46 @@
 import bcrypt
 from db import db                      # import the shared db
+from wtforms import StringField
 #testing
+
 class UserCreator:
+
     def __init__(self):
         self.users = db["users"]
 
-    def create_user(self, name, email, password, role, subjects):
-        if self.users.find_one({"email": email}):
-            return "User already exists"
 
-        hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt(12)).decode()
+    def create_student_user(self, name, email, password, role):
+        if self.users.find_one({"email": email}):
+            return False, "User already exists"
+
         doc = {
             "name": name,
             "email": email,
-            "pwdHash": hashed,
-            "role": role,
-            "subjects": subjects
+            "pwdHash": bcrypt.hashpw(password.encode(), bcrypt.gensalt(12)).decode(),
+            "role": role
         }
         self.users.insert_one(doc)
-        return "User created successfully"
+        return True, "Student created"
+
+    def create_tutor_user(self, name, email, password, role,
+                          subjects, rating, availability=None):
+        if self.users.find_one({"email": email}):
+            return False, "User already exists"
+
+        blank = {d: [] for d in
+                 ("sunday", "monday", "tuesday", "wednesday",
+                  "thursday", "friday", "saturday")}
+
+        doc = {
+            "name": name,
+            "email": email,
+            "pwdHash": bcrypt.hashpw(password.encode(), bcrypt.gensalt(12)).decode(),
+            "role": role,
+            "subjects": subjects,
+            "availability": availability or blank,
+            "rating": rating
+        }
+        self.users.insert_one(doc)
+        return True, "Tutor created"
+
+
