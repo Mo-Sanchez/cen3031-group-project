@@ -17,26 +17,50 @@ from UserCreator import UserCreator
 
 def run_demo():
 
+    demo_dict = {
+        'sunday': ["07:00", "09:00"],
+        'monday': ["17:00", "19:00"],
+        'tuesday': ["07:00", "09:00"],
+        'wednesday': ["17:00", "19:00"],
+        'thursday': ["00:00", "01:00"],
+        'friday': ["05:00", "09:45"],
+        'saturday': ["07:10", "09:50"]
+    }
+
     creator = UserCreator()
-    print(creator.create_user(
+    print(creator.create_student_user(
         "Moises Sanchez",
         "Moises@testing.com",
         "Password123",
-        "Student",
-        ["Computer Science"],
+        "Student"
+    ))
+
+    print(creator.create_tutor_user(
+        "Taylor Filson",
+        "Taylor@testing.com",
+        "123Password",
+        "Tutor",
+        ["computer science"],
+        "5",
+        demo_dict
     ))
 
     login = UserLogin()  # Logs in
     user_doc = login.login("Moises@testing.com",
                            "Password123")  # logins in with email and password as long as the user was created
     if user_doc:  # If the user is logged in
-        print(user_doc["name"])  # then print the user than is logged in name
-        print(user_doc["role"])  # then print their role
         ourUser = UserInstance(user_doc["_id"])
         ourUser.print_details()
     else:
         print("Invalid Credentials")  # if the user is not logged in, then print "Invalid Credentials"
 
+    user_doc2 = login.login("Taylor@testing.com",
+                           "123Password")  # logins in with email and password as long as the user was created
+    if user_doc:  # If the user is logged in
+        ourUser2 = UserInstance(user_doc2["_id"])
+        ourUser2.print_details()
+    else:
+        print("Invalid Credentials")  # if the user is not logged in, then print "Invalid Credentials"
 
 # --- Flask App and frontend Integration ---
 class RegistrationForm(FlaskForm):
@@ -97,7 +121,7 @@ def load_user(user_id):
     doc = UserLogin().users.find_one({"_id": ObjectId(user_id)})
     return User(doc) if doc else None
 
-b
+
 @app.route('/')
 def index():
     return render_template('base.html')

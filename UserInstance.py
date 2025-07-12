@@ -12,10 +12,11 @@ class UserInstance:
         self.email = doc["email"]
         self.name = doc["name"]
         self.userType = doc["role"]
-        self.subjectList = doc["subjects"]
-        if self.userType == "Student":
+        if self.userType == "Student":  # Student account specific processes
             new_cursor = db.meetings.find({"studentID": self.userID})
-        else:
+        else:                           # Tutor account specific processes
+            self.subjectList = doc["subjects"]
+            self.availability = doc["availability"]
             new_cursor = db.meetings.find({"tutorID": self.userID})
         if new_cursor:  # only if meetings.find found anything
             for item in list(new_cursor):
@@ -35,5 +36,7 @@ class UserInstance:
         print(self.name)
         print(self.email)
         print(self.userType)
-        print(self.subjectList)
-        print(self.meetingList)
+        if self.userType == "Tutor":
+            print(self.subjectList)
+            print(self.meetingList)
+            print(self.availability)

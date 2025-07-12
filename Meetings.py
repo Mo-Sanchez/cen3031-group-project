@@ -10,22 +10,31 @@ FORMAT = '%Y-%m-%d %I:%M %p'  # constant
 date string is in the format "year-month-day hour:minute am/pm"
 an example string is "2004-05-02 09:43 pm" for 9:43 PM on the 2nd of May, 2004
 Strings in this format can easily be parsed to and from a datetime object.
-datetime object to string via "datetime.strftime(FORMAT)" the 'f' in the function name is important
+datetime object to string via "datetime_object.strftime(FORMAT)" the 'f' in the function name is important
 and string to datetime object via "datetime.strptime(datetime_object, FORMAT)" the 'p' is important
-datetime objects store time in 24 hour time, but we can input and output in AM/PM time
+datetime objects store time in 24 hour format, but we can handle input and output in AM/PM time
 """
 
 
 class MeetingObj:
     def __init__(self, meeting_id):
         self.meetings = db["meetings"]
+        self.users = db["users"]
         self.meetingID = meeting_id
 
+        # store basic information
         doc = self.meetings.find_one({"_id": self.meetingID})
         self.tutorID = doc["tutorID"]
         self.studentID = doc["studentID"]
         self.rating = doc["rating"]
         self.comment = doc["comment"]
+
+        # store names for frontend purposes
+        tutor_doc = self.users.find_one({"_id": self.tutorID})
+        self.tutorName = tutor_doc["name"]
+
+        student_doc = self.users.find_one({"_id": self.studentID})
+        self.studentName = student_doc["name"]
 
         scheduled_raw = doc["scheduledTime"]
         self.scheduledTime = datetime.strptime(scheduled_raw, FORMAT)
@@ -34,7 +43,7 @@ class MeetingObj:
         self.createdAt = datetime.strptime(created_raw, FORMAT)
 
     def print_details(self):
-        print(f"Meeting between {self.tutorID} and {self.studentID} on {self.scheduledTime.strftime(FORMAT)}")
+        print(f"Meeting between {self.tutorName} and {self.studentName} on {self.scheduledTime.strftime(FORMAT)}")
 
 
 
