@@ -1,6 +1,6 @@
 import bcrypt
 from db import db                      # import the shared db
-
+#testing
 class UserCreator:
     def __init__(self):
         self.users = db["users"]
