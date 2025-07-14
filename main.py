@@ -166,29 +166,32 @@ def logout():
 
 
 if __name__ == '__main__':
-    while True:
-        choice = input("Choose your demo: \n1. 1_1\n2. 1_2 \n")
-        if choice == "1":
-            run_demo1_1()
-            break
-        elif choice == "2":
-            run_demo1_2()
-            break
-        else:
-            print("invalid input")
-    # app.run(debug=True)
-    while True:
-        print("Enter \"quit\" to cancel")
-        email = input("Enter email: ")
-        if email == "quit":
-            break
-        password = input("Enter password: ")
-        if password == "quit":
-            break
-        login = UserLogin()
-        user_doc = login.login(email, password)
-        if user_doc:  # If the user is logged in
-            ourUser = UserInstance(user_doc["_id"])
-            ourUser.print_details()
-        else:
-            print("Invalid Credentials")  # if the user is not logged in, then print "Invalid Credentials"
+    runApp = input("Run the app? (Y/N)\n")
+    if runApp == "Y":
+        app.run(debug=True)
+    else:
+        while True:
+            choice = input("Choose your demo: \n1. 1_1\n2. 1_2 \n")
+            if choice == "1":
+                run_demo1_1()
+                break
+            elif choice == "2":
+                run_demo1_2()
+                break
+            else:
+                print("invalid input")
+        while True:
+            print("Enter \"quit\" to cancel")
+            email = input("Enter email: ")
+            if email == "quit":
+                break
+            password = input("Enter password: ")
+            if password == "quit":
+                break
+            login = UserLogin()
+            user_doc = login.login(email, password)
+            if user_doc:  # If the user is logged in
+                ourUser = UserInstance(user_doc["_id"])
+                ourUser.print_details()
+            else:
+                print("Invalid Credentials")  # if the user is not logged in, then print "Invalid Credentials"
