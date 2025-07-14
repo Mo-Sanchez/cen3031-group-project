@@ -170,7 +170,7 @@ if __name__ == '__main__':
     if runApp == "Y":
         app.run(debug=True)
     else:
-        while True:
+        while True:  # Looping until a viable demo is chosen
             choice = input("Choose your demo: \n1. 1_1\n2. 1_2 \n")
             if choice == "1":
                 run_demo1_1()
@@ -180,7 +180,8 @@ if __name__ == '__main__':
                 break
             else:
                 print("invalid input")
-        while True:
+
+        while True:  # Looping for login testings
             print("Enter \"quit\" to cancel")
             email = input("Enter email: ")
             if email == "quit":

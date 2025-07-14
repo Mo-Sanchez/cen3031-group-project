@@ -2,7 +2,7 @@ from UserCreator import UserCreator
 from Meetings import MeetingCreator
 
 
-def run_demo1_1():
+def run_demo1_1():  # Create Student Accounts
     creator = UserCreator()
     creator.delete_by_email(["Nick@testing.com", "Noah@testing.com"])
     print(creator.create_student_user(
@@ -27,7 +27,7 @@ def run_demo1_1():
     ))
 
 
-def run_demo1_2():
+def run_demo1_2():  # Create Tutor Account
     demo_dict = {
         'sunday': ["07:00", "09:00"],
         'monday': ["17:00", "19:00"],
@@ -49,3 +49,7 @@ def run_demo1_2():
         "5",
         demo_dict
     ))
+
+
+def run_demo2_1():
+    pass
