@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tutor Dashboard</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 40px; }
+      h1 { color: #28a745; }
+      table { border-collapse: collapse; width: 100%; margin-bottom: 30px;}
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: center;}
+      th { background: #28a745; color: #fff;}
+      .actions a { margin: 0 10px; text-decoration: none; color: #28a745;}
+    </style>
+</head>
+<body>
+    <h1>Welcome, {{ tutor_name }}</h1>
+    <h2>Your Upcoming Appointments</h2>
+    <table>
+      <tr>
+        <th>Date</th><th>Time</th><th>Student</th><th>Subject</th>
+      </tr>
+      {% for appt in appointments %}
+      <tr>
+        <td>{{ appt.date }}</td>
+        <td>{{ appt.time }}</td>
+        <td>{{ appt.student }}</td>
+        <td>{{ appt.subject }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div>
+      <a href="/logout">Logout</a>
+    </div>
+    <a href="{{ url_for('account_settings') }}" class="btn btn-outline-primary">Account Settings</a>
+{% if session.get('role') == 'Tutor' %}
+<a href="{{ url_for('tutor_settings') }}" class="btn btn-outline-success">Availability Settings</a>
+
+{% endif %}
+
+</body>
+</html>

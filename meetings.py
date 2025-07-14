@@ -10,11 +10,10 @@ StudentAcc objects.
 
 
 class Meeting:
-    studentList = []
-
     def __init__(self, leader, date_string):  # date string is in the format "year-month-day hour:minute am/pm"
         self.leader = leader
         self.meetTime = datetime.strptime(date_string, FORMAT)
+        self.studentList = []
 
     def add_student(self, to_append):
         self.studentList.append(to_append)
