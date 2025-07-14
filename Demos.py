@@ -4,7 +4,7 @@ from Meetings import MeetingCreator
 
 def run_demo1_1():
     creator = UserCreator()
-    creator.delete_users_email(["Nick@testing.com", "Noah@testing.com"])
+    creator.delete_by_email(["Nick@testing.com", "Noah@testing.com"])
     print(creator.create_student_user(
         "Nick Bonilla",
         "Nick@testing.com",
@@ -39,7 +39,7 @@ def run_demo1_2():
     }
 
     creator = UserCreator()
-    creator.delete_users_email(["Moises@testing.com"])
+    creator.delete_by_email(["Moises@testing.com"])
     print(creator.create_tutor_user(
         "Moises Sanchez",
         "Moises@testing.com",
