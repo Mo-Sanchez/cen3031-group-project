@@ -3,11 +3,11 @@ from wtforms import StringField
 
 from db import db  # import the shared db
 
+
 class UserCreator:
 
     def __init__(self):
         self.users = db["users"]
-
 
     def create_student_user(self, name, email, password, role):
         if self.users.find_one({"email": email}):
@@ -43,4 +43,6 @@ class UserCreator:
         self.users.insert_one(doc)
         return True, "Tutor created"
 
-
+    def delete_by_email(self, email_list):
+        for item in email_list:
+            self.users.delete_one({"email" : item})
