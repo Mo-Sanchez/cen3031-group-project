@@ -30,13 +30,14 @@ class UserInstance:
             new_cursor = db.meetings.find({"tutorID": self.userID})
         if new_cursor:  # only if meetings.find found anything
             for item in list(new_cursor):
-                self.meetingList.append(MeetingObj(item))
+                self.meetingList.append(MeetingObj(item["_id"]))
 
     def print_details(self):
         print(self.name)
         print(self.email)
         print(self.userType)
+        for item in self.meetingList:
+            print(item.scheduledTime)
         if self.userType == "Tutor":
             print(self.subjectList)
-            print(self.meetingList)
             print(self.availability)
