@@ -171,13 +171,15 @@ if __name__ == '__main__':
         app.run(debug=True)
     else:
         while True:  # Looping until a viable demo is chosen
-            choice = input("Choose your demo: \n1. 1_1\n2. 1_2 \n")
+            choice = input("Choose your demo: \n1. 1_1\n2. 1_2 \n3. 2_1\n")
             if choice == "1":
                 run_demo1_1()
                 break
             elif choice == "2":
                 run_demo1_2()
                 break
+            elif choice == "3":
+                run_demo2_1()
             else:
                 print("invalid input")
 
