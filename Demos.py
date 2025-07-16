@@ -1,5 +1,7 @@
 from UserCreator import UserCreator
 from Meetings import MeetingCreator
+from UserLogin import UserLogin
+from UserInstance import UserInstance
 
 
 def run_demo1_1():  # Create Student Accounts
@@ -51,5 +53,26 @@ def run_demo1_2():  # Create Tutor Account
     ))
 
 
-def run_demo2_1():
-    pass
+def run_demo2_1():  # Create meeting
+    run_demo1_1()
+    run_demo1_2()
+    login = UserLogin()
+    meet_creator = MeetingCreator()
+    student_doc = login.login("Nick@testing.com", "psw123")
+    tutor_doc = login.login("Moises@testing.com", "123Password")
+    student = UserInstance(student_doc["_id"])
+    tutor = UserInstance(tutor_doc["_id"])
+
+    meet_creator.delete_by_tutorID(tutor_doc["_id"])
+
+    meet_creator.create_meeting(tutor.userID,
+                                student.userID,
+                                "5",
+                                "",
+                                "2025-12-20 11:12 am",
+                                "2025-12-25 09:40 pm"
+                                )
+    student.update_meetings()
+    tutor.update_meetings()
+    student.print_details()
+    tutor.print_details()

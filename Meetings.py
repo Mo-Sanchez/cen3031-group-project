@@ -121,3 +121,6 @@ class MeetingCreator:
         if result.matched_count == 0:
             return "Meeting not found"
         return "Rating updated"
+
+    def delete_by_tutorID(self, tutor_id):
+        self.meetings.delete_many({"tutorID": tutor_id})
