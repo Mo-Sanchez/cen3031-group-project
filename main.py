@@ -4,10 +4,15 @@ from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, Length, EqualTo
 from wtforms.fields import TimeField
 from datetime import datetime
+from UserCreator import UserCreator
+from UserLogin import UserLogin
+from UserInstance import UserInstance
 
 
 def current_user_email():
     return session.get('email')
+def current_user_name():
+    return session.get('name')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'change-this-to-a-very-secret-key'
@@ -46,10 +51,15 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 class RegistrationForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
     role = SelectField('Account Type', choices=[('Student', 'Student'), ('Tutor', 'Tutor')], validators=[DataRequired()])
+    #start_avail = SelectField('Start Availability', validators=[DataRequired()])
+    #end_avail = SelectField('End Availability', validators=[DataRequired()])
+
+
     submit = SubmitField('Register')
 
 class AccountSettingsForm(FlaskForm):
@@ -70,6 +80,8 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
+    login = UserLogin()
+
     if form.validate_on_submit():
         email = form.email.data.lower()
         password = form.password.data
@@ -77,38 +89,66 @@ def login():
         #   student@demo.com / student123
         #   tutor@demo.com / tutor123
         #   smith@demo.com / smith123
-        if email in mock_users:
-            role = mock_users[email]['role']
-            # Demo check: student123, tutor123, smith123
-            if (role == 'Student' and password == 'student123') or \
-               (email == 'tutor@demo.com' and password == 'tutor123') or \
-               (email == 'smith@demo.com' and password == 'smith123'):
-                session['role'] = role
-                session['user'] = mock_users[email]['name']
-                session['email'] = email
-                return redirect(url_for(f"{role.lower()}_dashboard"))
-            else:
-                flash("Invalid credentials", "danger")
+        print("Debug: About to Login")
+        user_doc = login.login(email, password)
+        print("Debug: Logged In")
+
+        if user_doc:
+            userName = user_doc["name"]
+            userEmail = user_doc["email"]
+            userRole = user_doc["role"]
+
+            loggedInUser = {
+                    'name': userName,
+                    'role': userRole
+                }
+
+            session['role'] = userRole
+            session['name'] = userName
+            session['user'] = loggedInUser
+            session['email'] = userEmail
+
+
+            return redirect(url_for(f"{userRole.lower()}_dashboard"))
+
         else:
-            flash("User not found", "danger")
+            flash("Invalid credentials", "danger")
     return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    creator = UserCreator()
     form = RegistrationForm()
+    success = False
+    message = ""
     if form.validate_on_submit():
         email = form.email.data.lower()
-        if email in mock_users:
-            flash("User already exists.", "danger")
-            return render_template('register.html', form=form)
+
+
+
         role = form.role.data
 
+        if role == "Student":
+            success, message = creator.create_student_user(
+                form.name.data,
+                form.email.data,
+                form.password.data,
+                form.role.data
+            )
+
         # For tutors, default availability
-        user = {'name': email.split('@')[0].capitalize(), 'role': role}
+        #user = {'name': email.split('@')[0].capitalize(), 'role': role}
 
         if role == 'Tutor':
-            user['availability'] = {'start': '09:00', 'end': '17:00'}
-        mock_users[email] = user
+            success, message = creator.create_student_user(
+                form.name.data,
+                form.email.data,
+                form.password.data,
+                form.role.data,
+                #form.start_avail,
+                #form.end_avail
+            )
+
         flash("Registration successful! Please log in.", "success")
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
@@ -123,7 +163,7 @@ def student_dashboard():
     for tutor, apps in tutor_appointments.items():
         for a in apps:
             appointments.append({'date': a['date'], 'time': a['time'], 'tutor': tutor, 'subject': 'Demo'})
-    return render_template('student_dashboard.html', student_name=session.get('user', ''), appointments=appointments)
+    return render_template('student_dashboard.html', student_name=session["name"], appointments=appointments)
 
 @app.route('/tutor_dashboard')
 def tutor_dashboard():
@@ -131,7 +171,7 @@ def tutor_dashboard():
         flash("Please log in as tutor.", "warning")
         return redirect(url_for('login'))
     tutor_name = session.get('user', '')
-    appointments = tutor_appointments.get(tutor_name, [])
+    appointments = tutor_appointments.get(session["name"], [])
     # Display booked times
     display = []
     for a in appointments:
@@ -140,21 +180,22 @@ def tutor_dashboard():
 
 @app.route('/settings', methods=['GET', 'POST'])
 def account_settings():
-    email = current_user_email()
-    if not email or email not in mock_users:
-        flash("Please log in.", "warning")
-        return redirect(url_for('login'))
-
+    creator = UserCreator()
     form = AccountSettingsForm()
-    user = mock_users[email]
-    if request.method == 'GET':
-        form.name.data = user.get('name', '')
+    user = session.get("user",{})
+
+    if request.method =="GET":
+        form.name.data = user.get("name", "")
 
     if form.validate_on_submit():
         user['name'] = form.name.data
-        session['user'] = form.name.data  # Update session display
+        session['name'] = form.name.data
+        session['user'] = user
+        creator.change_name(session['email'], form.name.data)
+
         flash("Name updated!", "success")
         return redirect(url_for('account_settings'))
+
     return render_template('settings.html', form=form, user=user)
 
 @app.route('/tutor/settings', methods=['GET', 'POST'])
