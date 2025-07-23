@@ -84,13 +84,14 @@ class MeetingCreator:
     def __init__(self):
         self.meetings = db["meetings"]
 
-    def create_meeting(self, tutor_email, student_email, date, time, subject):
+    def create_meeting(self, tutor_id, student_id, rating, comment, created_at, scheduled_time):
         meeting_doc = {
-            "tutorEmail": tutor_email,
-            "studentEmail": student_email,
-            "date": date,
-            "time": time,
-            "subject": subject
+            "tutorID": tutor_id,
+            "studentID": student_id,
+            "scheduledTime": scheduled_time,
+            "rating": rating,
+            "comment": comment,
+            "createdAt": created_at
         }
         self.meetings.insert_one(meeting_doc)
         return "Meeting Created"

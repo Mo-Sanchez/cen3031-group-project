@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, flash, session, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
-from wtforms.validators import DataRequired, Email, Length, EqualTo
+from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
 from wtforms.fields import TimeField
 from datetime import datetime
 from UserCreator import UserCreator
@@ -11,8 +11,15 @@ from UserInstance import UserInstance
 
 def current_user_email():
     return session.get('email')
+
+
 def current_user_name():
     return session.get('name')
+
+def half_hour_choices():
+    return [(f"{h:02d}:{m:02d}", f"{h:02d}:{m:02d}")
+            for h in range(24) for m in (0, 30)]
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'change-this-to-a-very-secret-key'
@@ -44,11 +51,16 @@ tutor_appointments = {
     'Smith': []
 }
 
+
 # FORMS
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
+
+
+
+
 
 class RegistrationForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired()])
@@ -56,26 +68,30 @@ class RegistrationForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
     role = SelectField('Account Type', choices=[('Student', 'Student'), ('Tutor', 'Tutor')], validators=[DataRequired()])
-    #start_avail = SelectField('Start Availability', validators=[DataRequired()])
-    #end_avail = SelectField('End Availability', validators=[DataRequired()])
-
+    subject = StringField('Subject', validators=[Optional()])
+    start_avail = SelectField('Start Availability', choices=half_hour_choices(), validators=[Optional()])
+    end_avail = SelectField('End Availability', choices=half_hour_choices(), validators=[Optional()])
 
     submit = SubmitField('Register')
+
 
 class AccountSettingsForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired()])
     submit = SubmitField('Save')
+
 
 class AvailabilityForm(FlaskForm):
     start = TimeField('Start Time', format='%H:%M', validators=[DataRequired()])
     end = TimeField('End Time', format='%H:%M', validators=[DataRequired()])
     submit = SubmitField('Update Availability')
 
+
 # ---- ROUTES ----
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -99,21 +115,21 @@ def login():
             userRole = user_doc["role"]
 
             loggedInUser = {
-                    'name': userName,
-                    'role': userRole
-                }
+                'name': userName,
+                'role': userRole
+            }
 
             session['role'] = userRole
             session['name'] = userName
             session['user'] = loggedInUser
             session['email'] = userEmail
 
-
             return redirect(url_for(f"{userRole.lower()}_dashboard"))
 
         else:
             flash("Invalid credentials", "danger")
     return render_template('login.html', form=form)
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -123,8 +139,6 @@ def register():
     message = ""
     if form.validate_on_submit():
         email = form.email.data.lower()
-
-
 
         role = form.role.data
 
@@ -137,21 +151,23 @@ def register():
             )
 
         # For tutors, default availability
-        #user = {'name': email.split('@')[0].capitalize(), 'role': role}
+        # user = {'name': email.split('@')[0].capitalize(), 'role': role}
 
         if role == 'Tutor':
-            success, message = creator.create_student_user(
+            success, message = creator.create_tutor_user(
                 form.name.data,
                 form.email.data,
                 form.password.data,
                 form.role.data,
-                #form.start_avail,
-                #form.end_avail
+                form.subject.data,
+                form.start_avail.data,
+                form.end_avail.data
             )
 
         flash("Registration successful! Please log in.", "success")
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
+
 
 @app.route('/student_dashboard')
 def student_dashboard():
@@ -165,26 +181,27 @@ def student_dashboard():
             appointments.append({'date': a['date'], 'time': a['time'], 'tutor': tutor, 'subject': 'Demo'})
     return render_template('student_dashboard.html', student_name=session["name"], appointments=appointments)
 
+
 @app.route('/tutor_dashboard')
 def tutor_dashboard():
     if session.get('role') != 'Tutor':
         flash("Please log in as tutor.", "warning")
         return redirect(url_for('login'))
-    tutor_name = session.get('user', '')
     appointments = tutor_appointments.get(session["name"], [])
     # Display booked times
     display = []
     for a in appointments:
         display.append({'date': a['date'], 'time': a['time'], 'student': 'Student', 'subject': 'Demo'})
-    return render_template('tutor_dashboard.html', tutor_name=tutor_name, appointments=display)
+    return render_template('tutor_dashboard.html', tutor_name=session["name"], appointments=display)
+
 
 @app.route('/settings', methods=['GET', 'POST'])
 def account_settings():
     creator = UserCreator()
     form = AccountSettingsForm()
-    user = session.get("user",{})
+    user = session.get("user", {})
 
-    if request.method =="GET":
+    if request.method == "GET":
         form.name.data = user.get("name", "")
 
     if form.validate_on_submit():
@@ -197,6 +214,7 @@ def account_settings():
         return redirect(url_for('account_settings'))
 
     return render_template('settings.html', form=form, user=user)
+
 
 @app.route('/tutor/settings', methods=['GET', 'POST'])
 def tutor_settings():
@@ -220,6 +238,7 @@ def tutor_settings():
         return redirect(url_for('tutor_settings'))
 
     return render_template('tutor_settings.html', form=form, tutor_name=tutor_name)
+
 
 @app.route('/make_appointment', methods=['GET', 'POST'])
 def make_appointment():
@@ -257,11 +276,13 @@ def make_appointment():
 
     return render_template('make_appointment.html', tutors=tutors, mock_users=mock_users)
 
+
 @app.route('/logout')
 def logout():
     session.clear()
     flash("Logged out.", "info")
     return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
