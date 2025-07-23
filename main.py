@@ -12,9 +12,12 @@ def current_user_email():
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'change-this-to-a-very-secret-key'
 
-# ---- MOCK USER DB ----
+# MOCK USER DB
 mock_users = {
-    'student@demo.com': {'name': 'Lucas', 'role': 'Student'},
+    'student@demo.com': {
+        'name': 'Lucas',
+        'role': 'Student'
+    },
     'tutor@demo.com': {
         'name': 'Bond',
         'role': 'Tutor',
@@ -27,16 +30,16 @@ mock_users = {
     }
 }
 
-# ---- MOCK APPOINTMENTS ----
+# MOCK APPOINTMENTS
 tutor_appointments = {
     'Bond': [
-        {'date': '2025-07-15', 'time': '10:00'},  # already booked!
+        {'date': '2025-07-15', 'time': '10:00'},
         {'date': '2025-07-18', 'time': '13:00'}
     ],
     'Smith': []
 }
 
-# ---- FORMS ----
+# FORMS
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
@@ -99,8 +102,10 @@ def register():
             flash("User already exists.", "danger")
             return render_template('register.html', form=form)
         role = form.role.data
+
         # For tutors, default availability
         user = {'name': email.split('@')[0].capitalize(), 'role': role}
+
         if role == 'Tutor':
             user['availability'] = {'start': '09:00', 'end': '17:00'}
         mock_users[email] = user
