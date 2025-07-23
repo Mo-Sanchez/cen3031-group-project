@@ -1,11 +1,9 @@
-<!-- templates/register.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Register</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Bootstrap CSS -->
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
     rel="stylesheet"
@@ -14,17 +12,20 @@
 <body>
   <div class="container py-5">
     <div class="row justify-content-center">
-      <div class="col-md-6">
-        <h2 class="mb-4 text-center">Create an Account</h2>
+      <div class="col-md-7">
+        <h2 class="mb-4 text-center">Register</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
         <form method="post" action="{{ url_for('register') }}">
           {{ form.hidden_tag() }}
-          <div class="mb-3">
-            {{ form.name.label(class="form-label") }}
-            {{ form.name(class="form-control", placeholder="Your full name") }}
-            {% for err in form.name.errors %}
-              <div class="text-danger small">{{ err }}</div>
-            {% endfor %}
-          </div>
           <div class="mb-3">
             {{ form.email.label(class="form-label") }}
             {{ form.email(class="form-control", placeholder="you@example.com") }}
@@ -34,14 +35,14 @@
           </div>
           <div class="mb-3">
             {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control", placeholder="••••••••") }}
+            {{ form.password(class="form-control", placeholder="Create a password") }}
             {% for err in form.password.errors %}
               <div class="text-danger small">{{ err }}</div>
             {% endfor %}
           </div>
           <div class="mb-3">
             {{ form.confirm_password.label(class="form-label") }}
-            {{ form.confirm_password(class="form-control", placeholder="••••••••") }}
+            {{ form.confirm_password(class="form-control", placeholder="Repeat your password") }}
             {% for err in form.confirm_password.errors %}
               <div class="text-danger small">{{ err }}</div>
             {% endfor %}
@@ -53,11 +54,7 @@
               <div class="text-danger small">{{ err }}</div>
             {% endfor %}
           </div>
-          <div class="mb-3">
-            {{ form.subjects.label(class="form-label") }}
-            {{ form.subjects(class="form-control", placeholder="e.g. algebra, python") }}
-          </div>
-          <button type="submit" class="btn btn-success w-100">Register</button>
+          <button type="submit" class="btn btn-primary w-100">Register</button>
         </form>
         <p class="mt-3 text-center">
           Already have an account?
@@ -66,7 +63,6 @@
       </div>
     </div>
   </div>
-  <!-- Bootstrap JS Bundle -->
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
   ></script>

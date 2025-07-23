@@ -1,200 +1,226 @@
-import os
-
-from bson import ObjectId
-from flask import Flask, render_template, redirect, url_for, flash, request
-from flask_wtf import FlaskForm, CSRFProtect
+from flask import Flask, render_template, redirect, url_for, flash, session, request
+from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, Length, EqualTo
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user, UserMixin
-from flask_pymongo import PyMongo
-
-from UserLogin import UserLogin
-from Meetings import MeetingObj
-from Month import Month
-from UserInstance import UserInstance
-from UserCreator import UserCreator
-
-from Demos import *
+from wtforms.fields import TimeField
+from datetime import datetime
 
 
-# --- Flask App and frontend Integration ---
-class RegistrationForm(FlaskForm):
-    name = StringField('Full Name', validators=[DataRequired(), Length(min=2, max=50)])
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
-    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
-    role = SelectField('Account Type', choices=[('Student', 'Student'), ('Tutor', 'Tutor')],
-                       validators=[DataRequired()])
+def current_user_email():
+    return session.get('email')
 
-    # {% if form.role.data == 'Tutor' %}
-    subjects = StringField('Subjects (comma-separated)')
-    sun_start = StringField('Sunday start')
-    sun_end = StringField('Sunday end')
-    mon_start = StringField('Monday start')
-    mon_end = StringField('Monday end')
-    tue_start = StringField('Tuesday start')
-    tue_end = StringField('Tuesday end')
-    wed_start = StringField('Wednesday start')
-    wed_end = StringField('Wednesday end')
-    thu_start = StringField('Thursday start')
-    thu_end = StringField('Thursday end')
-    fri_start = StringField('Friday start')
-    fri_end = StringField('Friday end')
-    sat_start = StringField('Saturday start')
-    sat_end = StringField('Saturday end')
-    # {% endif %}
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'change-this-to-a-very-secret-key'
 
-    submit = SubmitField('Register')
+# MOCK USER DB
+mock_users = {
+    'student@demo.com': {
+        'name': 'Lucas',
+        'role': 'Student'
+    },
+    'tutor@demo.com': {
+        'name': 'Bond',
+        'role': 'Tutor',
+        'availability': {'start': '09:00', 'end': '17:00'}
+    },
+    'smith@demo.com': {
+        'name': 'Smith',
+        'role': 'Tutor',
+        'availability': {'start': '10:00', 'end': '16:00'}
+    }
+}
 
+# MOCK APPOINTMENTS
+tutor_appointments = {
+    'Bond': [
+        {'date': '2025-07-15', 'time': '10:00'},
+        {'date': '2025-07-18', 'time': '13:00'}
+    ],
+    'Smith': []
+}
 
+# FORMS
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
 
+class RegistrationForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    role = SelectField('Account Type', choices=[('Student', 'Student'), ('Tutor', 'Tutor')], validators=[DataRequired()])
+    submit = SubmitField('Register')
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key')
-app.config['MONGO_URI'] = os.getenv('MONGO_URI', 'mongodb://localhost:27017/tutorsched')
+class AccountSettingsForm(FlaskForm):
+    name = StringField('Name', validators=[DataRequired()])
+    submit = SubmitField('Save')
 
-mongo = PyMongo(app)
-csrf = CSRFProtect(app)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+class AvailabilityForm(FlaskForm):
+    start = TimeField('Start Time', format='%H:%M', validators=[DataRequired()])
+    end = TimeField('End Time', format='%H:%M', validators=[DataRequired()])
+    submit = SubmitField('Update Availability')
 
-
-class User(UserMixin):
-    def __init__(self, user_doc):
-        self.id = str(user_doc['_id'])
-        self.name = user_doc['name']
-        self.email = user_doc['email']
-        self.role = user_doc['role']
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    doc = UserLogin().users.find_one({"_id": ObjectId(user_id)})
-    return User(doc) if doc else None
-
+# ---- ROUTES ----
 
 @app.route('/')
 def index():
-    return render_template('base.html')
-
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    form = RegistrationForm()
-    success = False
-    message = ""
-    if form.validate_on_submit():
-        subjects = [s.strip() for s in form.subjects.data.split(',')] if form.subjects.data else []
-
-        creator = UserCreator()
-        if form.role.data == "Tutor":
-            raw_input = {
-                'sunday': [form.sun_start.data, form.sun_end.data],
-                'monday': [form.mon_start.data, form.mon_end.data],
-                'tuesday': [form.tue_start.data, form.tue_end.data],
-                'wednesday': [form.wed_start.data, form.wed_end.data],
-                'thursday': [form.thu_start.data, form.thu_end.data],
-                'friday': [form.fri_start.data, form.fri_end.data],
-                'saturday': [form.sat_start.data, form.sat_end.data]
-            }
-
-            availability = {}
-            for day, (start, end) in raw_input.items():
-                if start and end and end > start:
-                    availability[day] = (start, end)
-                else:
-                    availability[day] = None
-
-            success, message = creator.create_tutor_user(
-                form.name.data,
-                form.email.data,
-                form.password.data,
-                form.role.data,
-                subjects,
-                0,
-                availability
-            )
-        else:
-            success, message = creator.create_student_user(
-                form.name.data,
-                form.email.data,
-                form.password.data,
-                form.role.data,
-            )
-
-    if success:
-        flash('Account created! Please log in.', 'success')
-        return redirect(url_for('login'))
-    elif message:
-        flash(message, 'danger')
-
-
-    return render_template('register.html', form=form)
-
+    return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        authenticator = UserLogin()
-        user_doc = authenticator.login(form.email.data, form.password.data)
-        if user_doc:
-            user = User(user_doc)
-            login_user(user)
-            return redirect(url_for('dashboard'))
-        flash('Invalid credentials', 'danger')
+        email = form.email.data.lower()
+        password = form.password.data
+        # Demo passwords:
+        #   student@demo.com / student123
+        #   tutor@demo.com / tutor123
+        #   smith@demo.com / smith123
+        if email in mock_users:
+            role = mock_users[email]['role']
+            # Demo check: student123, tutor123, smith123
+            if (role == 'Student' and password == 'student123') or \
+               (email == 'tutor@demo.com' and password == 'tutor123') or \
+               (email == 'smith@demo.com' and password == 'smith123'):
+                session['role'] = role
+                session['user'] = mock_users[email]['name']
+                session['email'] = email
+                return redirect(url_for(f"{role.lower()}_dashboard"))
+            else:
+                flash("Invalid credentials", "danger")
+        else:
+            flash("User not found", "danger")
     return render_template('login.html', form=form)
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        email = form.email.data.lower()
+        if email in mock_users:
+            flash("User already exists.", "danger")
+            return render_template('register.html', form=form)
+        role = form.role.data
 
-@app.route('/dashboard')
-@login_required
-def dashboard():
-    meetings = []
-    return render_template('dashboard.html', meetings=meetings)
+        # For tutors, default availability
+        user = {'name': email.split('@')[0].capitalize(), 'role': role}
 
+        if role == 'Tutor':
+            user['availability'] = {'start': '09:00', 'end': '17:00'}
+        mock_users[email] = user
+        flash("Registration successful! Please log in.", "success")
+        return redirect(url_for('login'))
+    return render_template('register.html', form=form)
+
+@app.route('/student_dashboard')
+def student_dashboard():
+    if session.get('role') != 'Student':
+        flash("Please log in as student.", "warning")
+        return redirect(url_for('login'))
+    # List all tutors for new appointment, and sample appointment display
+    appointments = []
+    for tutor, apps in tutor_appointments.items():
+        for a in apps:
+            appointments.append({'date': a['date'], 'time': a['time'], 'tutor': tutor, 'subject': 'Demo'})
+    return render_template('student_dashboard.html', student_name=session.get('user', ''), appointments=appointments)
+
+@app.route('/tutor_dashboard')
+def tutor_dashboard():
+    if session.get('role') != 'Tutor':
+        flash("Please log in as tutor.", "warning")
+        return redirect(url_for('login'))
+    tutor_name = session.get('user', '')
+    appointments = tutor_appointments.get(tutor_name, [])
+    # Display booked times
+    display = []
+    for a in appointments:
+        display.append({'date': a['date'], 'time': a['time'], 'student': 'Student', 'subject': 'Demo'})
+    return render_template('tutor_dashboard.html', tutor_name=tutor_name, appointments=display)
+
+@app.route('/settings', methods=['GET', 'POST'])
+def account_settings():
+    email = current_user_email()
+    if not email or email not in mock_users:
+        flash("Please log in.", "warning")
+        return redirect(url_for('login'))
+
+    form = AccountSettingsForm()
+    user = mock_users[email]
+    if request.method == 'GET':
+        form.name.data = user.get('name', '')
+
+    if form.validate_on_submit():
+        user['name'] = form.name.data
+        session['user'] = form.name.data  # Update session display
+        flash("Name updated!", "success")
+        return redirect(url_for('account_settings'))
+    return render_template('settings.html', form=form, user=user)
+
+@app.route('/tutor/settings', methods=['GET', 'POST'])
+def tutor_settings():
+    email = current_user_email()
+    if not email or mock_users.get(email, {}).get('role') != 'Tutor':
+        flash("Only tutors can set availability.", "danger")
+        return redirect(url_for('login'))
+
+    tutor_name = mock_users[email]['name']
+    form = AvailabilityForm()
+    avail = mock_users[email]['availability']
+    # Pre-populate with current values on GET
+    if request.method == 'GET':
+        form.start.data = datetime.strptime(avail['start'], '%H:%M').time()
+        form.end.data = datetime.strptime(avail['end'], '%H:%M').time()
+
+    if form.validate_on_submit():
+        avail['start'] = form.start.data.strftime('%H:%M')
+        avail['end'] = form.end.data.strftime('%H:%M')
+        flash('Availability updated!', 'success')
+        return redirect(url_for('tutor_settings'))
+
+    return render_template('tutor_settings.html', form=form, tutor_name=tutor_name)
+
+@app.route('/make_appointment', methods=['GET', 'POST'])
+def make_appointment():
+    if session.get('role') != 'Student':
+        flash("Please log in as student.", "warning")
+        return redirect(url_for('login'))
+
+    tutors = [email for email, u in mock_users.items() if u['role'] == 'Tutor']
+
+    if request.method == 'POST':
+        date = request.form['date']
+        time = request.form['time']
+        tutor_email = request.form['tutor']
+        subject = request.form['subject']
+
+        tutor_user = mock_users[tutor_email]
+        tutor_name = tutor_user['name']
+        start = tutor_user['availability']['start']
+        end = tutor_user['availability']['end']
+        if not (start <= time <= end):
+            flash(f"{tutor_name} is only available between {start} and {end}.", 'danger')
+            return render_template('make_appointment.html', tutors=tutors, mock_users=mock_users)
+
+        # Check for conflicts
+        appts = tutor_appointments.setdefault(tutor_name, [])
+        conflict = any(app['date'] == date and app['time'] == time for app in appts)
+        if conflict:
+            flash(f"{tutor_name} already has an appointment at this time. Please pick another slot.", 'danger')
+            return render_template('make_appointment.html', tutors=tutors, mock_users=mock_users)
+
+        # Otherwise, book it
+        appts.append({'date': date, 'time': time})
+        flash(f'Appointment booked for {date} at {time} with {tutor_name} for {subject}.', 'success')
+        return redirect(url_for('student_dashboard'))
+
+    return render_template('make_appointment.html', tutors=tutors, mock_users=mock_users)
 
 @app.route('/logout')
-@login_required
 def logout():
-    logout_user()
-    flash('You have been logged out.', 'info')
-    return redirect(url_for('login'))
-
+    session.clear()
+    flash("Logged out.", "info")
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    runApp = input("Run the app? (Y/N)\n")
-    if runApp == "Y":
-        app.run(debug=True)
-    else:
-        while True:  # Looping until a viable demo is chosen
-            choice = input("Choose your demo: \n1. 1_1\n2. 1_2 \n3. 2_1\n")
-            if choice == "1":
-                run_demo1_1()
-                break
-            elif choice == "2":
-                run_demo1_2()
-                break
-            elif choice == "3":
-                run_demo2_1()
-            else:
-                print("invalid input")
-
-        while True:  # Looping for login testings
-            print("Enter \"quit\" to cancel")
-            email = input("Enter email: ")
-            if email == "quit":
-                break
-            password = input("Enter password: ")
-            if password == "quit":
-                break
-            login = UserLogin()
-            user_doc = login.login(email, password)
-            if user_doc:  # If the user is logged in
-                ourUser = UserInstance(user_doc["_id"])
-                ourUser.print_details()
-            else:
-                print("Invalid Credentials")  # if the user is not logged in, then print "Invalid Credentials"
+    app.run(debug=True)
