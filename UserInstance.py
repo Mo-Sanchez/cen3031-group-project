@@ -1,5 +1,5 @@
 from db import db                      # import the shared db
-from Meetings import MeetingObj
+from meetings import MeetingObj
 
 
 class UserInstance:
@@ -41,3 +41,12 @@ class UserInstance:
         if self.userType == "Tutor":
             print(self.subjectList)
             print(self.availability)
+
+
+    def get_user_information(self, user_email):
+        user_info = self.users.find({"email": user_email})
+        user_name = user_info["name"]
+        user_role = user_info["role"]
+
+        if user_role == "Tutor":
+            user_availability = user_info["availability"]

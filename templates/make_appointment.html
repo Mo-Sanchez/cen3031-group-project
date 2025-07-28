@@ -28,9 +28,12 @@
       </div>
       <div class="mb-3">
         <label for="tutor" class="form-label">Tutor</label>
-        <select class="form-select" id="tutor" name="tutor">
+        <select class="form-select" id="tutor" name="tutor" required>
+          <option value="" disabled selected>Select a tutor…</option>
           {% for tutor in tutors %}
-            <option value="{{ tutor }}">{{ tutor }}</option>
+            <option value="{{ tutor.email }}">
+              {{ tutor.name }} — {{ tutor.start_availability }}–{{ tutor.end_availability }}
+            </option>
           {% endfor %}
         </select>
       </div>

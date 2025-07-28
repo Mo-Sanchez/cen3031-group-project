@@ -23,13 +23,9 @@ class UserCreator:
         return True, "Student created"
 
     def create_tutor_user(self, name, email, password, role,
-                          subjects, rating, availability=None):
+                          subjects, start_avail, end_avail):
         if self.users.find_one({"email": email}):
             return False, "User already exists"
-
-        blank = {d: [] for d in
-                 ("sunday", "monday", "tuesday", "wednesday",
-                  "thursday", "friday", "saturday")}
 
         doc = {
             "name": name,
@@ -37,12 +33,25 @@ class UserCreator:
             "pwdHash": bcrypt.hashpw(password.encode(), bcrypt.gensalt(12)).decode(),
             "role": role,
             "subjects": subjects,
-            "availability": availability or blank,
-            "rating": rating
+            "start_availability": start_avail,
+            "end_availability": end_avail
         }
+
         self.users.insert_one(doc)
         return True, "Tutor created"
 
     def delete_by_email(self, email_list):
         for item in email_list:
             self.users.delete_one({"email" : item})
+
+    def change_name(self, email, name):
+        self.users.update_one(
+            {"email": email},
+            {"$set": {"name": name}}
+        )
+
+    def change_availability(self, email, availability):
+        self.users.update_one(
+            {"email": email, "role": "Tutor"},
+            {"$set": {"availability": availability}}
+        )
