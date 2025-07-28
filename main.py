@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, url_for, flash, session, req
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
-from wtforms.fields import TimeField
+from wtforms.fields import TimeField, BooleanField, HiddenField
 from datetime import datetime
 from UserCreator import UserCreator
 from UserLogin import UserLogin
@@ -15,6 +15,7 @@ def current_user_email():
 
 def current_user_name():
     return session.get('name')
+
 
 def half_hour_choices():
     return [(f"{h:02d}:{m:02d}", f"{h:02d}:{m:02d}")
@@ -59,9 +60,6 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 
-
-
-
 class RegistrationForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -78,6 +76,11 @@ class RegistrationForm(FlaskForm):
 class AccountSettingsForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired()])
     submit = SubmitField('Save')
+    delete = HiddenField(
+        'data',
+        render_kw={'id': 'data'},
+        default="None"
+    )
 
 
 class AvailabilityForm(FlaskForm):
@@ -205,12 +208,16 @@ def account_settings():
         form.name.data = user.get("name", "")
 
     if form.validate_on_submit():
-        user['name'] = form.name.data
-        session['name'] = form.name.data
-        session['user'] = user
-        creator.change_name(session['email'], form.name.data)
-
-        flash("Name updated!", "success")
+        if form.delete.data == "True":
+            # user deletes account
+            creator.delete_by_email([current_user_email()])
+            return redirect(url_for('register'))
+        elif form.delete.data != "False":
+            user['name'] = form.name.data
+            session['name'] = form.name.data
+            session['user'] = user
+            creator.change_name(session['email'], form.name.data)
+            flash("Name updated!", "success")
         return redirect(url_for('account_settings'))
 
     return render_template('settings.html', form=form, user=user)

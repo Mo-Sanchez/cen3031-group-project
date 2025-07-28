@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html xmlns="http://www.w3.org/1999/html">
 <head>
     <title>Account Settings</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -18,7 +18,24 @@
       </div>
       <button type="submit" class="btn btn-primary">Save</button>
       <a href="{{ url_for('student_dashboard') if user['role']=='Student' else url_for('tutor_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        <button class="btn btn-danger" onclick="confirmDelete()">DeleteAccount</button>
     </form>
 </div>
+
+<script>
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+    function confirmDelete(){
+        var result = (confirm("Are you sure? This action cannot be undone."))
+        if (result){
+            document.getElementById('data').value = 'True'
+        }
+        else{
+            document.getElementById('data').value = 'False'
+        }
+    }
+
+
+</script>
+
 </body>
 </html>

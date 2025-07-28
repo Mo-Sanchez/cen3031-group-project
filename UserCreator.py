@@ -44,7 +44,6 @@ class UserCreator:
         for item in email_list:
             self.users.delete_one({"email" : item})
 
-
     def change_name(self, email, name):
         self.users.update_one(
             {"email": email},
