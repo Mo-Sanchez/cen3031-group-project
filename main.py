@@ -148,7 +148,7 @@ def register():
         if role == "Student":
             success, message = creator.create_student_user(
                 form.name.data,
-                form.email.data,
+                email,
                 form.password.data,
                 form.role.data
             )
@@ -159,16 +159,20 @@ def register():
         if role == 'Tutor':
             success, message = creator.create_tutor_user(
                 form.name.data,
-                form.email.data,
+                email,
                 form.password.data,
                 form.role.data,
                 form.subject.data,
                 form.start_avail.data,
                 form.end_avail.data
             )
+        if success:
+            flash("Registration successful! Please log in.", "success")
+            return redirect(url_for('login'))
+        else:
+            flash("Error: user already exists!", "error")
+            return redirect(url_for('register'))
 
-        flash("Registration successful! Please log in.", "success")
-        return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
 
@@ -211,6 +215,7 @@ def account_settings():
         if form.delete.data == "True":
             # user deletes account
             creator.delete_by_email([current_user_email()])
+            flash("Account successfully deleted.", "success")
             return redirect(url_for('register'))
         elif form.delete.data != "False":
             user['name'] = form.name.data
