@@ -6,6 +6,10 @@ from wtforms.fields import TimeField, BooleanField, HiddenField
 from datetime import datetime
 from UserCreator import UserCreator
 from UserLogin import UserLogin
+from db import db
+from meetings import MeetingCreator
+from datetime import datetime, timedelta
+from flask import jsonify
 from UserInstance import UserInstance
 
 
@@ -104,10 +108,6 @@ def login():
     if form.validate_on_submit():
         email = form.email.data.lower()
         password = form.password.data
-        # Demo passwords:
-        #   student@demo.com / student123
-        #   tutor@demo.com / tutor123
-        #   smith@demo.com / smith123
         print("Debug: About to Login")
         user_doc = login.login(email, password)
         print("Debug: Logged In")
@@ -177,11 +177,23 @@ def student_dashboard():
     if session.get('role') != 'Student':
         flash("Please log in as student.", "warning")
         return redirect(url_for('login'))
-    # List all tutors for new appointment, and sample appointment display
+
+    meetings_coll = db["meetings"]
+    users_coll = db["users"]
+    student_email = session["email"]
+
+    meetings = list(meetings_coll.find({"studentEmail": student_email}))
+
     appointments = []
-    for tutor, apps in tutor_appointments.items():
-        for a in apps:
-            appointments.append({'date': a['date'], 'time': a['time'], 'tutor': tutor, 'subject': 'Demo'})
+    for m in meetings:
+        tutor_doc = users_coll.find_one({"email": m["tutorEmail"]}, {"name": 1})
+        appointments.append({
+            "date": m["scheduledDate"],
+            "time": m["scheduledTime"],
+            "tutor": tutor_doc["name"] if tutor_doc else m["tutorEmail"],
+            "subject": m.get("subject", "N/A")
+        })
+
     return render_template('student_dashboard.html', student_name=session["name"], appointments=appointments)
 
 
@@ -190,12 +202,21 @@ def tutor_dashboard():
     if session.get('role') != 'Tutor':
         flash("Please log in as tutor.", "warning")
         return redirect(url_for('login'))
-    appointments = tutor_appointments.get(session["name"], [])
-    # Display booked times
-    display = []
-    for a in appointments:
-        display.append({'date': a['date'], 'time': a['time'], 'student': 'Student', 'subject': 'Demo'})
-    return render_template('tutor_dashboard.html', tutor_name=session["name"], appointments=display)
+
+    meetings = db["meetings"]
+    tutor_email = session.get("email")
+
+    booked = meetings.find({"tutorEmail": tutor_email})
+    appointments = []
+    for m in booked:
+        appointments.append({
+            "date": m["scheduledDate"],
+            "time": m["scheduledTime"],
+            "student": m["studentEmail"],
+            "subject": m["subject"]
+        })
+
+    return render_template('tutor_dashboard.html', tutor_name=session["name"], appointments=appointments)
 
 
 @app.route('/settings', methods=['GET', 'POST'])
@@ -249,39 +270,96 @@ def tutor_settings():
 
 @app.route('/make_appointment', methods=['GET', 'POST'])
 def make_appointment():
+    # only students can book
     if session.get('role') != 'Student':
-        flash("Please log in as student.", "warning")
+        flash("Please log in as a student.", "warning")
         return redirect(url_for('login'))
 
-    tutors = [email for email, u in mock_users.items() if u['role'] == 'Tutor']
+    users_coll     = db["users"]
+    meetings_coll  = db["meetings"]
+    # only tutors that have start & end availability
+    tutors_docs = list(
+        users_coll.find(
+            {
+                "role": "Tutor",
+                "start_availability": {"$exists": True, "$type": "string", "$ne": ""},
+                "end_availability":   {"$exists": True, "$type": "string", "$ne": ""}
+            },
+            {
+                "_id": 0,
+                "name": 1,
+                "email": 1,
+                "start_availability": 1,
+                "end_availability": 1
+            }
+        )
+    )
 
-    if request.method == 'POST':
-        date = request.form['date']
-        time = request.form['time']
-        tutor_email = request.form['tutor']
-        subject = request.form['subject']
+    tutors_map = {t["email"]: t for t in tutors_docs}
 
-        tutor_user = mock_users[tutor_email]
-        tutor_name = tutor_user['name']
-        start = tutor_user['availability']['start']
-        end = tutor_user['availability']['end']
-        if not (start <= time <= end):
-            flash(f"{tutor_name} is only available between {start} and {end}.", 'danger')
-            return render_template('make_appointment.html', tutors=tutors, mock_users=mock_users)
+    if request.method == "POST":
+        date_str    = request.form["date"]
+        time_str    = request.form["time"]
+        tutor_email = request.form["tutor"]
+        subject     = request.form["subject"]
 
-        # Check for conflicts
-        appts = tutor_appointments.setdefault(tutor_name, [])
-        conflict = any(app['date'] == date and app['time'] == time for app in appts)
-        if conflict:
-            flash(f"{tutor_name} already has an appointment at this time. Please pick another slot.", 'danger')
-            return render_template('make_appointment.html', tutors=tutors, mock_users=mock_users)
+        tutor_doc = tutors_map.get(tutor_email)
+        if not tutor_doc:
+            flash("Tutor not found.", "danger")
+            return render_template(
+                "make_appointment.html",
+                tutors=tutors_docs
+            )
 
-        # Otherwise, book it
-        appts.append({'date': date, 'time': time})
-        flash(f'Appointment booked for {date} at {time} with {tutor_name} for {subject}.', 'success')
-        return redirect(url_for('student_dashboard'))
+        # availability check
+        start = tutor_doc.get("start_availability")
+        end   = tutor_doc.get("end_availability")
+        if not (start and end and start <= time_str <= end):
+            flash(
+                f"{tutor_doc['name']} is available only between "
+                f"{start} and {end}.",
+                "danger"
+            )
+            return render_template(
+                "make_appointment.html",
+                tutors=tutors_docs
+            )
 
-    return render_template('make_appointment.html', tutors=tutors, mock_users=mock_users)
+        # conflict check
+        clash = meetings_coll.find_one({
+            "tutorEmail": tutor_email,
+            "scheduledDate": date_str,
+            "scheduledTime": time_str
+        })
+        if clash:
+            flash(
+                f"{tutor_doc['name']} already has an appointment at that time.",
+                "danger"
+            )
+            return render_template(
+                "make_appointment.html",
+                tutors=tutors_docs
+            )
+
+        # create meeting
+        creator = MeetingCreator()
+        creator.create_meeting(
+            tutor_email     = tutor_email,
+            student_email   = session["email"],
+            scheduled_date  = date_str,
+            scheduled_time  = time_str,
+            subject         = subject
+        )
+
+        flash(
+            f"Appointment booked for {date_str} at {time_str} with "
+            f"{tutor_doc['name']} ({subject}).",
+            "success"
+        )
+        return redirect(url_for("student_dashboard"))
+
+    # GET request
+    return render_template("make_appointment.html", tutors=tutors_docs)
 
 
 @app.route('/logout')
