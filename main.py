@@ -9,6 +9,7 @@ from UserLogin import UserLogin
 from db import db
 from meetings import MeetingCreator
 from datetime import datetime, timedelta
+from bson import ObjectId
 from flask import jsonify
 from UserInstance import UserInstance
 
@@ -177,28 +178,34 @@ def register():
 
 
 @app.route('/student_dashboard')
+@app.route('/student_dashboard')
 def student_dashboard():
     if session.get('role') != 'Student':
         flash("Please log in as student.", "warning")
         return redirect(url_for('login'))
 
     meetings_coll = db["meetings"]
-    users_coll = db["users"]
+    users_coll    = db["users"]
     student_email = session["email"]
 
-    meetings = list(meetings_coll.find({"studentEmail": student_email}))
+    meetings = meetings_coll.find({"studentEmail": student_email})
 
     appointments = []
     for m in meetings:
         tutor_doc = users_coll.find_one({"email": m["tutorEmail"]}, {"name": 1})
         appointments.append({
+            "id":   str(m["_id"]),                       # ←  add this
             "date": m["scheduledDate"],
             "time": m["scheduledTime"],
             "tutor": tutor_doc["name"] if tutor_doc else m["tutorEmail"],
             "subject": m.get("subject", "N/A")
         })
 
-    return render_template('student_dashboard.html', student_name=session["name"], appointments=appointments)
+    return render_template(
+        'student_dashboard.html',
+        student_name=session["name"],
+        appointments=appointments
+    )
 
 
 @app.route('/tutor_dashboard')
@@ -365,6 +372,29 @@ def make_appointment():
 
     # GET request
     return render_template("make_appointment.html", tutors=tutors_docs)
+
+@app.route('/cancel_appointment', methods=['POST'])
+def cancel_appointment():
+    if session.get('role') != 'Student':
+        flash("Please log in as student.", "warning")
+        return redirect(url_for('login'))
+
+    meeting_id = request.form.get('meeting_id')
+    if not meeting_id:
+        flash("Invalid appointment.", "danger")
+        return redirect(url_for('student_dashboard'))
+
+    result = db["meetings"].delete_one({
+        "_id": ObjectId(meeting_id),
+        "studentEmail": session["email"]
+    })
+
+    if result.deleted_count:
+        flash("Appointment cancelled.", "success")
+    else:
+        flash("Appointment not found.", "danger")
+
+    return redirect(url_for('student_dashboard'))
 
 
 @app.route('/logout')
