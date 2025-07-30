@@ -122,17 +122,20 @@
     document.addEventListener('DOMContentLoaded', () => {
       const roleSelect = document.getElementById('roleSelect');
       const availFields = document.getElementById('availabilityFields');
+      const subjectField    = document.getElementById('subjectField');
 
-      function toggleAvailability() {
+      function toggleFields() {
         if (roleSelect.value === 'Tutor') {
           availFields.classList.remove('d-none');
+          subjectField.classList.remove('d-none');
         } else {
           availFields.classList.add('d-none');
+          subjectField.classList.add('d-none');
         }
       }
 
-      roleSelect.addEventListener('change', toggleAvailability);
-      toggleAvailability();            // run once on load
+      roleSelect.addEventListener('change', toggleFields);
+      toggleFields();            // run once on load
     });
 </script>
 </body>

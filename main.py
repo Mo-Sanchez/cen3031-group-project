@@ -9,6 +9,7 @@ from UserLogin import UserLogin
 from db import db
 from meetings import MeetingCreator
 from datetime import datetime, timedelta
+from bson import ObjectId
 from flask import jsonify
 from UserInstance import UserInstance
 
@@ -177,28 +178,34 @@ def register():
 
 
 @app.route('/student_dashboard')
+@app.route('/student_dashboard')
 def student_dashboard():
     if session.get('role') != 'Student':
         flash("Please log in as student.", "warning")
         return redirect(url_for('login'))
 
     meetings_coll = db["meetings"]
-    users_coll = db["users"]
+    users_coll    = db["users"]
     student_email = session["email"]
 
-    meetings = list(meetings_coll.find({"studentEmail": student_email}))
+    meetings = meetings_coll.find({"studentEmail": student_email})
 
     appointments = []
     for m in meetings:
         tutor_doc = users_coll.find_one({"email": m["tutorEmail"]}, {"name": 1})
         appointments.append({
+            "id":   str(m["_id"]),                       # ←  add this
             "date": m["scheduledDate"],
             "time": m["scheduledTime"],
             "tutor": tutor_doc["name"] if tutor_doc else m["tutorEmail"],
             "subject": m.get("subject", "N/A")
         })
 
-    return render_template('student_dashboard.html', student_name=session["name"], appointments=appointments)
+    return render_template(
+        'student_dashboard.html',
+        student_name=session["name"],
+        appointments=appointments
+    )
 
 
 @app.route('/tutor_dashboard')
@@ -207,20 +214,24 @@ def tutor_dashboard():
         flash("Please log in as tutor.", "warning")
         return redirect(url_for('login'))
 
-    meetings = db["meetings"]
-    tutor_email = session.get("email")
+    tutor_email = session["email"]
+    booked      = db["meetings"].find({"tutorEmail": tutor_email})
 
-    booked = meetings.find({"tutorEmail": tutor_email})
     appointments = []
     for m in booked:
         appointments.append({
-            "date": m["scheduledDate"],
-            "time": m["scheduledTime"],
+            "id":      str(m["_id"]),
+            "date":    m["scheduledDate"],
+            "time":    m["scheduledTime"],
             "student": m["studentEmail"],
             "subject": m["subject"]
         })
 
-    return render_template('tutor_dashboard.html', tutor_name=session["name"], appointments=appointments)
+    return render_template(
+        'tutor_dashboard.html',
+        tutor_name=session["name"],
+        appointments=appointments
+    )
 
 
 @app.route('/settings', methods=['GET', 'POST'])
@@ -249,28 +260,45 @@ def account_settings():
     return render_template('settings.html', form=form, user=user)
 
 
-@app.route('/tutor/settings', methods=['GET', 'POST'])
-def tutor_settings():
-    email = current_user_email()
-    if not email or mock_users.get(email, {}).get('role') != 'Tutor':
-        flash("Only tutors can set availability.", "danger")
+@app.route('/availability_settings', methods=['GET', 'POST'])
+def availability_settings():
+    if session.get('role') != 'Tutor':
+        flash("Only tutors can edit availability.", "danger")
         return redirect(url_for('login'))
 
-    tutor_name = mock_users[email]['name']
+    users = db["users"]
+    email = session["email"]
+    tutor = users.find_one({"email": email, "role": "Tutor"})
+    if not tutor:
+        flash("Tutor not found.", "danger")
+        return redirect(url_for('tutor_dashboard'))
+
     form = AvailabilityForm()
-    avail = mock_users[email]['availability']
-    # Pre-populate with current values on GET
-    if request.method == 'GET':
-        form.start.data = datetime.strptime(avail['start'], '%H:%M').time()
-        form.end.data = datetime.strptime(avail['end'], '%H:%M').time()
+
+    if request.method == "GET":
+        form.start.data = datetime.strptime(tutor["start_availability"], '%H:%M').time()
+        form.end.data   = datetime.strptime(tutor["end_availability"],   '%H:%M').time()
 
     if form.validate_on_submit():
-        avail['start'] = form.start.data.strftime('%H:%M')
-        avail['end'] = form.end.data.strftime('%H:%M')
-        flash('Availability updated!', 'success')
-        return redirect(url_for('tutor_settings'))
+        start = form.start.data.strftime('%H:%M')
+        end   = form.end.data.strftime('%H:%M')
 
-    return render_template('tutor_settings.html', form=form, tutor_name=tutor_name)
+        if start >= end:
+            flash("End time must be after start time.", "danger")
+            return render_template('availability_settings.html', form=form)
+
+        users.update_one(
+            {"email": email},
+            {"$set": {
+                "start_availability": start,
+                "end_availability":   end
+            }}
+        )
+        flash("Availability updated!", "success")
+        return redirect(url_for('tutor_dashboard'))
+
+    return render_template('availability_settings.html', form=form, tutor_name=session["name"])
+
 
 
 @app.route('/make_appointment', methods=['GET', 'POST'])
@@ -365,6 +393,29 @@ def make_appointment():
 
     # GET request
     return render_template("make_appointment.html", tutors=tutors_docs)
+
+
+@app.route('/cancel_appointment', methods=['POST'])
+def cancel_appointment():
+    role  = session.get('role')
+    email = session.get('email')
+    meet_id = request.form.get('meeting_id')
+
+    if role not in ("Student", "Tutor") or not meet_id:
+        flash("Invalid request.", "danger")
+        return redirect(url_for('index'))
+
+    criteria = {"_id": ObjectId(meet_id)}
+    if role == "Student":
+        criteria["studentEmail"] = email
+    else:
+        criteria["tutorEmail"] = email
+
+    deleted = db["meetings"].delete_one(criteria).deleted_count
+    flash("Appointment cancelled." if deleted else "Appointment not found.",
+          "success" if deleted else "danger")
+
+    return redirect(url_for(f"{role.lower()}_dashboard"))
 
 
 @app.route('/logout')
