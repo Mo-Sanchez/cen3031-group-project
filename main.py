@@ -2,16 +2,15 @@ from flask import Flask, render_template, redirect, url_for, flash, session, req
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
-from wtforms.fields import TimeField, BooleanField, HiddenField
+from wtforms.fields import TimeField, HiddenField
 from datetime import datetime
 from UserCreator import UserCreator
 from UserLogin import UserLogin
 from db import db
-from meetings import MeetingCreator
+from Meetings import MeetingCreator, break_time
 from datetime import datetime, timedelta
 from bson import ObjectId
 from flask import jsonify
-from UserInstance import UserInstance
 
 
 def current_user_email():
@@ -335,6 +334,7 @@ def make_appointment():
         time_str    = request.form["time"]
         tutor_email = request.form["tutor"]
         subject     = request.form["subject"]
+        creator = MeetingCreator()
 
         tutor_doc = tutors_map.get(tutor_email)
         if not tutor_doc:
@@ -375,7 +375,6 @@ def make_appointment():
             )
 
         # create meeting
-        creator = MeetingCreator()
         creator.create_meeting(
             tutor_email     = tutor_email,
             student_email   = session["email"],

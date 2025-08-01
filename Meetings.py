@@ -16,6 +16,39 @@ datetime objects store time in 24 hour format, but we can handle input and outpu
 """
 
 
+def break_time(start_time, end_time):
+    """
+        given a start and end time in 24h format,
+        returns a list of all possible start times for 30 minute meetings in 24-hour string format
+        EX: "19:21" for 7:21 pm, and "00:01" for 12:01 am.
+    """
+    times_list = []
+    start, end = start_time, end_time
+    start_parse_1, start_parse_2 = start.split(':')
+    end_parse_1, end_parse_2 = end.split(':')
+
+    int_start = [int(start_parse_1), int(start_parse_2)]
+    int_end = [int(end_parse_1), int(end_parse_2)]
+
+    meeting_count = 2 * (int_end[0] - int_start[0])
+
+    diff = int_end[1] - int_start[1]
+    if diff < -30:
+        meeting_count -= 2
+    elif diff < 0:
+        meeting_count -= 1
+    elif diff >= 30:
+        meeting_count += 1
+
+    for _ in range(meeting_count):
+        times_list.append(f"{str(int_start[0]).zfill(2)}:{str(int_start[1]).zfill(2)}")
+        int_start[1] += 30
+        if int_start[1] >= 60:
+            int_start[0] += 1
+            int_start[1] -= 60
+    return times_list
+
+
 class MeetingObj:
     def __init__(self, meeting_id):
         self.meetings = db["meetings"]
@@ -46,52 +79,18 @@ class MeetingObj:
         print(f"Meeting between {self.tutorName} and {self.studentName} on {self.scheduledTime.strftime(FORMAT)}")
 
 
-
-def break_time(dictionary, day):
-    """
-        given a dictionary and a day,
-        returns a list of all possible start times for 30 minute meetings in 24-hour string format
-        EX: "19:21" for 7:21 pm, and "00:01" for 12:01 am.
-    """
-    times_list = []
-    start, end = dictionary[day]
-    start_parse_1, start_parse_2 = start.split(':')
-    end_parse_1, end_parse_2 = end.split(':')
-
-    int_start = [int(start_parse_1), int(start_parse_2)]
-    int_end = [int(end_parse_1), int(end_parse_2)]
-
-    meeting_count = 2 * (int_end[0] - int_start[0])
-
-    diff = int_end[1] - int_start[1]
-    if diff < -30:
-        meeting_count -= 2
-    elif diff < 0:
-        meeting_count -= 1
-    elif diff >= 30:
-        meeting_count += 1
-
-    for _ in range(meeting_count):
-        times_list.append(f"{str(int_start[0]).zfill(2)}:{str(int_start[1]).zfill(2)}")
-        int_start[1] += 30
-        if int_start[1] >= 60:
-            int_start[0] += 1
-            int_start[1] -= 60
-    return times_list
-
-
 class MeetingCreator:
     def __init__(self):
         self.meetings = db["meetings"]
+        self.users = db["users"]
 
-    def create_meeting(self, tutor_id, student_id, rating, comment, created_at, scheduled_time):
+    def create_meeting(self, tutor_email, student_email, scheduled_date,scheduled_time,subject):
         meeting_doc = {
-            "tutorID": tutor_id,
-            "studentID": student_id,
+            "tutorEmail": tutor_email,
+            "studentEmail": student_email,
+            "scheduledDate": scheduled_date,
             "scheduledTime": scheduled_time,
-            "rating": rating,
-            "comment": comment,
-            "createdAt": created_at
+            "subject": subject
         }
         self.meetings.insert_one(meeting_doc)
         return "Meeting Created"
@@ -124,3 +123,37 @@ class MeetingCreator:
 
     def delete_by_tutorID(self, tutor_id):
         self.meetings.delete_many({"tutorID": tutor_id})
+
+    def search_by_date_and_subject(self, date, subject):
+        """
+        filters by a subject, and checks if they have availability that day.
+        Returns a list of tutors available tutors with their information accessible by dictionary
+        """
+        tutor_list = []
+        temp_cursor = self.users.find({"subjects": {"$in": [subject]}})
+        temp_list = list(temp_cursor)
+
+        if temp_cursor:
+            print(f"{len(temp_list)} tutors found!")
+            for user in temp_list:
+                # check if they're fully booked that day
+                broken_time = break_time(user["start_availability"], user["end_availability"])
+                fully_booked = True
+                for time in broken_time:
+                    clash = self.meetings.find_one({
+                        "tutorEmail": user["email"],
+                        "scheduledDate": date,
+                        "scheduledTime": time
+                    })
+                    if not clash:
+                        fully_booked = False
+                if not fully_booked:
+                    tutor_list.append(user)
+                    print(user["name"], end="")
+                    print(" added!")
+                else:
+                    print(user["name"], end="")
+                    print(" was fully booked!")
+        else:
+            print("no tutors found")
+        return tutor_list

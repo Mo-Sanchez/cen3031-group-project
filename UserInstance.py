@@ -1,5 +1,5 @@
 from db import db                      # import the shared db
-from meetings import MeetingObj
+from Meetings import MeetingObj
 
 
 class UserInstance:
