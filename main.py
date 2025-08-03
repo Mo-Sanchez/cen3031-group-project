@@ -387,9 +387,13 @@ def make_appointment():
         if not request.form.get("time"):
             date_str = request.form["date"]
             subject = request.form["subject"]
-            tutor_filter = request.form.get("tutor_filter", "").strip().lower()
+            tutor_filter = request.form.get("tutor_filter", "").strip()
 
-            matching_tutors = creator.search_by_date_and_subject(date_str, subject)
+            # If the user opted to filter by tutor passes the name.
+            if tutor_filter == "":
+                matching_tutors = creator.search_by_date_and_subject(date_str, subject)
+            else:
+                matching_tutors = creator.search_by_date_and_subject(date_str, subject, tutor_filter)
 
             # Add subjects and average ratings
             for tutor in matching_tutors:

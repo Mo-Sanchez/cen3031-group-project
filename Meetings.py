@@ -127,13 +127,14 @@ class MeetingCreator:
     def delete_by_tutorID(self, tutor_id):
         self.meetings.delete_many({"tutorID": tutor_id})
 
-    def search_by_date_and_subject(self, date, subject):
+    def search_by_date_and_subject(self, date, subject, specific=None):
         """
         filters by a subject, and checks if they have availability that day.
         Returns a list of tutors available tutors with their information accessible by dictionary
         """
         tutor_list = []
-        temp_cursor = self.users.find({"subjects" : {"$in": [subject]}})
+
+        temp_cursor = self.users.find({"subjects": {"$in": [subject]}})
         temp_list = list(temp_cursor)
 
         if temp_cursor:
@@ -151,9 +152,13 @@ class MeetingCreator:
                     if not clash:
                         fully_booked = False
                 if not fully_booked:
-                    tutor_list.append(user)
-                    print(user["name"], end="")
-                    print(" added!")
+                    if specific:
+                        if user["name"] == specific:
+                            tutor_list.append(user)
+                    else:
+                        tutor_list.append(user)
+                        print(user["name"], end="")
+                        print(" added!")
                 else:
                     print(user["name"], end="")
                     print(" was fully booked!")
