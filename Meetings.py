@@ -133,7 +133,7 @@ class MeetingCreator:
         Returns a list of tutors available tutors with their information accessible by dictionary
         """
         tutor_list = []
-        temp_cursor = self.users.find({"subjects": {"$in": [subject]}})
+        temp_cursor = self.users.find({"subjects" : {"$in": [subject]}})
         temp_list = list(temp_cursor)
 
         if temp_cursor:

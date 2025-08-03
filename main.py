@@ -382,16 +382,14 @@ def make_appointment():
     tutors_map = {t["email"]: t for t in tutors_docs}
 
     if request.method == "POST":
+        creator = MeetingCreator()
         # Step 1: Search for available tutors
         if not request.form.get("time"):
             date_str = request.form["date"]
             subject = request.form["subject"]
             tutor_filter = request.form.get("tutor_filter", "").strip().lower()
 
-            matching_tutors = [
-                t for t in tutors_docs
-                if tutor_filter in t["name"].lower() or not tutor_filter
-            ]
+            matching_tutors = creator.search_by_date_and_subject(date_str, subject)
 
             # Add subjects and average ratings
             for tutor in matching_tutors:
@@ -451,7 +449,6 @@ def make_appointment():
             return render_template("make_appointment.html", tutors=tutors_docs)
 
         # Create meeting
-        creator = MeetingCreator()
         creator.create_meeting(
             tutor_email=tutor_email,
             student_email=session["email"],
@@ -494,6 +491,7 @@ def tutor_profile(email):
 
 @app.route('/select_time')
 def select_time():
+    creator = MeetingCreator()
     tutor_email = request.args.get("tutor")
     date = request.args.get("date")
     subject = request.args.get("subject")
@@ -506,10 +504,9 @@ def select_time():
         return redirect(url_for("make_appointment"))
 
     # Generate 30-minute interval times
-    available_times = break_time(tutor_doc["start_availability"], tutor_doc["end_availability"])
+    available_times = creator.get_available_times(date, tutor_email)
 
     return render_template("select_time.html", tutor=tutor_doc, date=date, subject=subject, available_times=available_times)
-
 
 
 @app.route('/cancel_appointment', methods=['POST'])
