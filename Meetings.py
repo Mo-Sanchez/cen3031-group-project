@@ -50,6 +50,9 @@ def break_time(start_time, end_time):
 
 
 class MeetingObj:
+    """
+    Class used for early database debugging purposes, intentionally left unused in the final product
+    """
     def __init__(self, meeting_id):
         self.meetings = db["meetings"]
         self.users = db["users"]
@@ -157,3 +160,21 @@ class MeetingCreator:
         else:
             print("no tutors found")
         return tutor_list
+
+    def get_available_times(self, date, tutor_email):
+        """
+        Given a day and a specific tutor referenced by their email, returns a list of all
+        available starting times in 24 hr format "13:15" for 1:15 pm
+        """
+        times_list = []
+        tutor_doc = self.users.find_one({"email":tutor_email})
+        broken_time = break_time(tutor_doc["start_availability"], tutor_doc["end_availability"])
+        for time in broken_time:
+            clash = self.meetings.find_one({
+                "tutorEmail": tutor_email,
+                "scheduledDate": date,
+                "scheduledTime": time
+            })
+            if not clash:
+                times_list.append(time)
+        return times_list
