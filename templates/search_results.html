@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Select a Tutor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container py-5">
+  <h2 class="mb-4">Available Tutors for {{ subject }} on {{ date }}</h2>
+
+  {% if tutors %}
+    <ul class="list-group">
+      {% for tutor in tutors %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>
+              <a href="{{ url_for('tutor_profile', email=tutor.email) }}">
+                {{ tutor.name }}
+              </a>
+            </strong><br>
+            Available: {{ tutor.start_availability }} – {{ tutor.end_availability }}<br>
+            {% if tutor.subjects %}
+              Subjects: {{ tutor.subjects | join(', ') }}
+            {% endif %}
+            {% if tutor.avg_rating %}
+              <br>Average Rating: ⭐ {{ tutor.avg_rating }}/5
+            {% endif %}
+          </div>
+          <form method="GET" action="{{ url_for('select_time') }}">
+            <input type="hidden" name="tutor" value="{{ tutor.email }}">
+            <input type="hidden" name="date" value="{{ date }}">
+            <input type="hidden" name="subject" value="{{ subject }}">
+            <button type="submit" class="btn btn-outline-primary">Book</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No tutors found matching your criteria.</p>
+  {% endif %}
+
+  <a href="{{ url_for('make_appointment') }}" class="btn btn-secondary mt-4">Back</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
