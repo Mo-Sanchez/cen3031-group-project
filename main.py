@@ -193,7 +193,6 @@ def register():
 
 
 @app.route('/student_dashboard')
-@app.route('/student_dashboard')
 def student_dashboard():
     if session.get('role') != 'Student':
         flash("Please log in as student.", "warning")
@@ -355,21 +354,21 @@ def availability_settings():
 
 @app.route('/make_appointment', methods=['GET', 'POST'])
 def make_appointment():
-    # only students can book
+    # Only students can book
     if session.get('role') != 'Student':
         flash("Please log in as a student.", "warning")
         return redirect(url_for('login'))
 
-    users_coll     = db["users"]
-    meetings_coll  = db["meetings"]
+    users_coll = db["users"]
+    meetings_coll = db["meetings"]
 
-    # only tutors that have start & end availability
+    # Fetch tutors who have availability set
     tutors_docs = list(
         users_coll.find(
             {
                 "role": "Tutor",
                 "start_availability": {"$exists": True, "$type": "string", "$ne": ""},
-                "end_availability":   {"$exists": True, "$type": "string", "$ne": ""}
+                "end_availability": {"$exists": True, "$type": "string", "$ne": ""}
             },
             {
                 "_id": 0,
@@ -383,28 +382,22 @@ def make_appointment():
     tutors_map = {t["email"]: t for t in tutors_docs}
 
     if request.method == "POST":
-
-        # Distinguish between search and booking submission
+        # Step 1: Search for available tutors
         if not request.form.get("time"):
-            # Step 1: SEARCH
             date_str = request.form["date"]
             subject = request.form["subject"]
             tutor_filter = request.form.get("tutor_filter", "").strip().lower()
 
-            # Filter tutors by optional name match
             matching_tutors = [
                 t for t in tutors_docs
                 if tutor_filter in t["name"].lower() or not tutor_filter
             ]
 
-            # Add subjects and average rating to each tutor
+            # Add subjects and average ratings
             for tutor in matching_tutors:
                 full_doc = users_coll.find_one({"email": tutor["email"]})
-
-                # Add subjects if available
                 tutor["subjects"] = full_doc.get("subjects", [])
 
-                # Calculate average rating
                 ratings_cursor = meetings_coll.find({
                     "tutorEmail": tutor["email"],
                     "rating": {"$exists": True}
@@ -414,21 +407,7 @@ def make_appointment():
                     for m in ratings_cursor
                     if isinstance(m.get("rating"), (int, float))
                 ]
-                if ratings:
-                    tutor["avg_rating"] = round(sum(ratings) / len(ratings), 2)
-                else:
-                    tutor["avg_rating"] = None
-
-
-        date_str    = request.form["date"]
-        time_str    = request.form["time"]
-        tutor_email = request.form["tutor"]
-        subject     = request.form["subject"]
-        creator = MeetingCreator()
-
-        tutor_doc = tutors_map.get(tutor_email)
-        if not tutor_doc:
-            flash("Tutor not found.", "danger")
+                tutor["avg_rating"] = round(sum(ratings) / len(ratings), 2) if ratings else None
 
             return render_template(
                 "search_results.html",
@@ -437,68 +416,58 @@ def make_appointment():
                 subject=subject
             )
 
-        else:
-            # Step 2: BOOKING
-            date_str    = request.form["date"]
-            time_str    = request.form["time"]
-            tutor_email = request.form["tutor"]
-            subject     = request.form["subject"]
+        # Step 2: Booking an appointment
+        date_str = request.form["date"]
+        time_str = request.form["time"]
+        tutor_email = request.form["tutor"]
+        subject = request.form["subject"]
 
-            tutor_doc = tutors_map.get(tutor_email)
-            if not tutor_doc:
-                flash("Tutor not found.", "danger")
-                return render_template("make_appointment.html", tutors=tutors_docs)
+        tutor_doc = tutors_map.get(tutor_email)
+        if not tutor_doc:
+            flash("Tutor not found.", "danger")
+            return render_template("make_appointment.html", tutors=tutors_docs)
 
-            # availability check
-            start = tutor_doc.get("start_availability")
-            end   = tutor_doc.get("end_availability")
-            if not (start and end and start <= time_str <= end):
-                flash(
-                    f"{tutor_doc['name']} is available only between {start} and {end}.",
-                    "danger"
-                )
-                return render_template("make_appointment.html", tutors=tutors_docs)
-
-            # conflict check
-            clash = meetings_coll.find_one({
-                "tutorEmail": tutor_email,
-                "scheduledDate": date_str,
-                "scheduledTime": time_str
-            })
-            if clash:
-                flash(
-                    f"{tutor_doc['name']} already has an appointment at that time.",
-                    "danger"
-                )
-                return render_template("make_appointment.html", tutors=tutors_docs)
-
-            # create meeting
-            creator = MeetingCreator()
-            creator.create_meeting(
-                tutor_email     = tutor_email,
-                student_email   = session["email"],
-                scheduled_date  = date_str,
-                scheduled_time  = time_str,
-                subject         = subject
-            )
-
+        # Availability check
+        start = tutor_doc.get("start_availability")
+        end = tutor_doc.get("end_availability")
+        if not (start and end and start <= time_str <= end):
             flash(
-                f"Appointment booked for {date_str} at {time_str} with {tutor_doc['name']} ({subject}).",
-                "success"
+                f"{tutor_doc['name']} is available only between {start} and {end}.",
+                "danger"
             )
-            return redirect(url_for("student_dashboard"))
+            return render_template("make_appointment.html", tutors=tutors_docs)
+
+        # Conflict check
+        clash = meetings_coll.find_one({
+            "tutorEmail": tutor_email,
+            "scheduledDate": date_str,
+            "scheduledTime": time_str
+        })
+        if clash:
+            flash(
+                f"{tutor_doc['name']} already has an appointment at that time.",
+                "danger"
+            )
+            return render_template("make_appointment.html", tutors=tutors_docs)
+
+        # Create meeting
+        creator = MeetingCreator()
+        creator.create_meeting(
+            tutor_email=tutor_email,
+            student_email=session["email"],
+            scheduled_date=date_str,
+            scheduled_time=time_str,
+            subject=subject
+        )
+
+        flash(
+            f"Appointment booked for {date_str} at {time_str} with {tutor_doc['name']} ({subject}).",
+            "success"
+        )
+        return redirect(url_for("student_dashboard"))
 
     # GET request — initial search form
     return render_template("make_appointment.html", tutors=tutors_docs)
-
-        # create meeting
-        creator.create_meeting(
-            tutor_email     = tutor_email,
-            student_email   = session["email"],
-            scheduled_date  = date_str,
-            scheduled_time  = time_str,
-            subject         = subject
-        )
 
 
 @app.route('/tutor_profile/<email>')
