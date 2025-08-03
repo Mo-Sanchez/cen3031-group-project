@@ -2,16 +2,15 @@ from flask import Flask, render_template, redirect, url_for, flash, session, req
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
-from wtforms.fields import TimeField, BooleanField, HiddenField
+from wtforms.fields import TimeField, HiddenField
 from datetime import datetime
 from UserCreator import UserCreator
 from UserLogin import UserLogin
 from db import db
-from meetings import MeetingCreator
+from Meetings import MeetingCreator, break_time
 from datetime import datetime, timedelta
 from bson import ObjectId
 from flask import jsonify
-from UserInstance import UserInstance
 
 
 def current_user_email():
@@ -384,6 +383,7 @@ def make_appointment():
     tutors_map = {t["email"]: t for t in tutors_docs}
 
     if request.method == "POST":
+
         # Distinguish between search and booking submission
         if not request.form.get("time"):
             # Step 1: SEARCH
@@ -418,6 +418,17 @@ def make_appointment():
                     tutor["avg_rating"] = round(sum(ratings) / len(ratings), 2)
                 else:
                     tutor["avg_rating"] = None
+
+
+        date_str    = request.form["date"]
+        time_str    = request.form["time"]
+        tutor_email = request.form["tutor"]
+        subject     = request.form["subject"]
+        creator = MeetingCreator()
+
+        tutor_doc = tutors_map.get(tutor_email)
+        if not tutor_doc:
+            flash("Tutor not found.", "danger")
 
             return render_template(
                 "search_results.html",
@@ -479,6 +490,15 @@ def make_appointment():
 
     # GET request — initial search form
     return render_template("make_appointment.html", tutors=tutors_docs)
+
+        # create meeting
+        creator.create_meeting(
+            tutor_email     = tutor_email,
+            student_email   = session["email"],
+            scheduled_date  = date_str,
+            scheduled_time  = time_str,
+            subject         = subject
+        )
 
 
 @app.route('/tutor_profile/<email>')
