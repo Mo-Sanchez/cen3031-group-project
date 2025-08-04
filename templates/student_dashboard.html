@@ -49,7 +49,7 @@
     </table>
 
     <a href="{{ url_for('logout') }}" class="btn btn-secondary">Logout</a>
-    <a href="{{ url_for('make_appointment') }}" class="btn btn-success mb-3">Make New Appointment</a>
+    <a href="{{ url_for('make_appointment') }}" class="btn btn-success">Make New Appointment</a>
     <a href="{{ url_for('account_settings') }}" class="btn btn-outline-primary">Account Settings</a>
 
     {% if session.get('role') == 'Tutor' %}
