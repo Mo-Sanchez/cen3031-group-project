@@ -10,7 +10,7 @@
 
   <p><strong>Email:</strong> {{ tutor.email }}</p>
   <p><strong>Availability:</strong> {{ tutor.start_availability }} – {{ tutor.end_availability }}</p>
-  <p><strong>Subjects:</strong> {{ tutor.subjects | join(', ') if tutor.subjects else 'Not listed' }}</p>
+  <p><strong>Subject:</strong> {{ tutor.subjects if tutor.subjects else 'Not listed' }}</p>
 
   {% if avg_rating %}
     <p><strong>Average Rating:</strong> ⭐ {{ avg_rating }}/5</p>

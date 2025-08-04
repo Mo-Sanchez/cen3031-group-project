@@ -20,7 +20,7 @@
             </strong><br>
             Available: {{ tutor.start_availability }} – {{ tutor.end_availability }}<br>
             {% if tutor.subjects %}
-              Subjects: {{ tutor.subjects | join(', ') }}
+              Subject: {{ tutor.subjects }}
             {% endif %}
             {% if tutor.avg_rating %}
               <br>Average Rating: ⭐ {{ tutor.avg_rating }}/5
