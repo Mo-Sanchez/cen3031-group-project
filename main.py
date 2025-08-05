@@ -15,9 +15,9 @@ app.config['SECRET_KEY'] = 'change-this-to-a-very-secret-key'
 # Registers route groups for authentication, students, tutors, settings, and demo functionality
 app.register_blueprint(auth_bp) # This route handles authentication related functionality like login, registration, and logout
 app.register_blueprint(student_bp) # This route handles all student functionality including appointment booking and rating
-app.register_blueprint(tutor_bp) # This route handles
-app.register_blueprint(settings_bp) # This route handles
-app.register_blueprint(demo_bp) # This route
+app.register_blueprint(tutor_bp) # This route manages all tutor functionality such as dashboard view and availability settings
+app.register_blueprint(settings_bp) # This route handles user account settings
+app.register_blueprint(demo_bp) # This route provides sample data for testing purposes
 
 # Returns the homepage of the application
 @app.route('/')
