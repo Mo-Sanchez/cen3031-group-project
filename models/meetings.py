@@ -15,7 +15,7 @@ and string to datetime object via "datetime.strptime(datetime_object, FORMAT)" t
 datetime objects store time in 24 hour format, but we can handle input and output in AM/PM time
 """
 
-
+#returns all possible 30 minute time slots between start and end times in 24 hour format
 def break_time(start_time, end_time):
     """
         given a start and end time in 24h format,
@@ -49,6 +49,7 @@ def break_time(start_time, end_time):
     return times_list
 
 
+# Unused class: loads meeting details from database and provides a print method
 class MeetingObj:
     """
     Class used for early database debugging purposes, intentionally left unused in the final product
@@ -81,12 +82,13 @@ class MeetingObj:
     def print_details(self):
         print(f"Meeting between {self.tutorName} and {self.studentName} on {self.scheduledTime.strftime(FORMAT)}")
 
-
+# Manages meeting creation, rating, availability checks, and tutor/student appointments
 class MeetingCreator:
     def __init__(self):
         self.meetings = db["meetings"]
         self.users = db["users"]
 
+#inserts a new meeting into the database with the given details
     def create_meeting(self, tutor_email, student_email, scheduled_date,scheduled_time,subject):
         meeting_doc = {
             "tutorEmail": tutor_email,
@@ -97,7 +99,7 @@ class MeetingCreator:
         }
         self.meetings.insert_one(meeting_doc)
         return "Meeting Created"
-
+# calculates and returns the average rating for a tutor by past meeting ratings
     def tutor_rating(self, tutor_id):
         meetings = self.meetings.find({"tutorID": tutor_id})
         total = 0
@@ -110,6 +112,7 @@ class MeetingCreator:
             return "No meetings found"
         return round(total / count, 2)
 
+#updates the rating and optional comment for a meeting using its ID
     def update_rating(self, meeting_id, new_rating, new_comment=None):
         update_fields = {"rating": new_rating}
         if new_comment is not None:
@@ -124,9 +127,11 @@ class MeetingCreator:
             return "Meeting not found"
         return "Rating updated"
 
+# deletes all meetings associates with tutor ID
     def delete_by_tutorID(self, tutor_id):
         self.meetings.delete_many({"tutorID": tutor_id})
 
+#searches for tutors by subject and availability on given data, optionally filtering by name
     def search_by_date_and_subject(self, date, subject, specific=None):
         """
         filters by a subject, and checks if they have availability that day.
@@ -166,6 +171,7 @@ class MeetingCreator:
             print("no tutors found")
         return tutor_list
 
+#Returns all available time slots for a tutor on a specified data by checking for clashing in the meeting schedule
     def get_available_times(self, date, tutor_email):
         """
         Given a day and a specific tutor referenced by their email, returns a list of all

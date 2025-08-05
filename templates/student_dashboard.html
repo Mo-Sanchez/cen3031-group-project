@@ -38,7 +38,7 @@
           <td>{{ appt.tutor }}</td>
           <td>{{ appt.subject }}</td>
           <td>
-            <form method="POST" action="{{ url_for('cancel_appointment') }}">
+            <form method="POST" action="{{ url_for('student_bp.cancel_appointment') }}">
               <input type="hidden" name="meeting_id" value="{{ appt.id }}">
               <button type="submit" class="btn btn-danger btn-sm">Cancel</button>
             </form>
@@ -48,15 +48,15 @@
       </tbody>
     </table>
 
-    <a href="{{ url_for('logout') }}" class="btn btn-secondary">Logout</a>
-    <a href="{{ url_for('make_appointment') }}" class="btn btn-success">Make New Appointment</a>
-    <a href="{{ url_for('account_settings') }}" class="btn btn-outline-primary">Account Settings</a>
+    <a href="{{ url_for('auth_bp.logout') }}" class="btn btn-secondary">Logout</a>
+    <a href="{{ url_for('student_bp.make_appointment') }}" class="btn btn-success">Make New Appointment</a>
+    <a href="{{ url_for('settings_bp.account_settings') }}" class="btn btn-outline-primary">Account Settings</a>
 
     {% if session.get('role') == 'Tutor' %}
-      <a href="{{ url_for('availability_settings') }}" class="btn btn-outline-success">Availability Settings</a>
+      <a href="{{ url_for('tutor_bp.availability_settings') }}" class="btn btn-outline-success">Availability Settings</a>
     {% endif %}
 
-    <a href="{{ url_for('rate_tutor') }}" class="btn btn-outline-warning">Rate a Tutor</a>
+    <a href="{{ url_for('student_bp.rate_tutor') }}" class="btn btn-outline-warning">Rate a Tutor</a>
 
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

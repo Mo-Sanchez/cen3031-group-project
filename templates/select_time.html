@@ -8,7 +8,7 @@
 <div class="container py-5">
   <h2 class="mb-4">Select a Time with {{ tutor.name }} on {{ date }}</h2>
 
-  <form method="POST" action="{{ url_for('make_appointment') }}">
+  <form method="POST" action="{{ url_for('student_bp.make_appointment') }}">
     <input type="hidden" name="tutor" value="{{ tutor.email }}">
     <input type="hidden" name="date" value="{{ date }}">
     <input type="hidden" name="subject" value="{{ subject }}">
@@ -23,7 +23,7 @@
     </div>
 
     <button type="submit" class="btn btn-primary">Confirm Appointment</button>
-    <a href="{{ url_for('make_appointment') }}" class="btn btn-secondary ms-2">Cancel</a>
+    <a href="{{ url_for('student_bp.make_appointment') }}" class="btn btn-secondary ms-2">Cancel</a>
   </form>
 </div>
 

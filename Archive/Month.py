@@ -1,7 +1,7 @@
 import calendar
 from datetime import datetime
-from Meetings import MeetingObj
 
+#Unused Month class
 CONST_MONTHS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 CONST_DAYS = {
     0: "monday",

@@ -32,7 +32,7 @@
 
       <!-- Buttons -->
       <button type="submit" class="btn btn-primary">Save</button>
-      <a href="{{ url_for('student_dashboard') if user['role']=='Student' else url_for('tutor_dashboard') }}" class="btn btn-secondary">Cancel</a>
+      <a href="{{ url_for('student_bp.student_dashboard') if session.get('role')=='Student' else url_for('tutor_bp.tutor_dashboard') }}" class="btn btn-secondary">Cancel</a>
       <button class="btn btn-danger" onclick="confirmDelete()">DeleteAccount</button>
 
     </form>
