@@ -26,7 +26,7 @@
             {% endif %}
             {% endwith %}
 
-            <form method="post" action="{{ url_for('register') }}">
+            <form method="post" action="{{ url_for('auth_bp.register') }}">
                 {{ form.hidden_tag() }}
 
                 <!-- Name -->
@@ -108,7 +108,7 @@
 
             <p class="mt-3 text-center">
                 Already have an account?
-                <a href="{{ url_for('login') }}">Login here</a>.
+                <a href="{{ url_for('auth_bp.login') }}">Login here</a>.
             </p>
         </div>
     </div>

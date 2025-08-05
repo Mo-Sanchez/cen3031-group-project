@@ -1,7 +1,7 @@
 from db import db                      # import the shared db
-from Meetings import MeetingObj
+from models.meetings import MeetingObj
 
-
+# Unused UserInstance class
 class UserInstance:
     def __init__(self, user_id):
         self.users = db["users"]

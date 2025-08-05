@@ -1,9 +1,9 @@
-from UserCreator import UserCreator
-from Meetings import MeetingCreator
-from UserLogin import UserLogin
+from user_creator import UserCreator
+from meetings import MeetingCreator
+from user_login import UserLogin
 from Archive.UserInstance import UserInstance
 
-
+#Creates two student accounts and tests duplicate email handling
 def run_demo1_1():  # Create Student Accounts
     creator = UserCreator()
     creator.delete_by_email(["Nick@testing.com", "Noah@testing.com"])
@@ -28,7 +28,7 @@ def run_demo1_1():  # Create Student Accounts
         "Student"
     ))
 
-
+# creates a single tutor account with a weekly availability schedule and deletes any prior record with the same email
 def run_demo1_2():  # Create Tutor Account
     demo_dict = {
         'sunday': ["07:00", "09:00"],
@@ -53,6 +53,7 @@ def run_demo1_2():  # Create Tutor Account
     ))
 
 
+# Sets up student and tutor account, logs them in, deletes previous meetings for tutor, and creates a new meeting between them and updates and displays the meeting data
 def run_demo2_1():  # Create meeting
     run_demo1_1()
     run_demo1_2()
