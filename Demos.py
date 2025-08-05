@@ -1,7 +1,7 @@
 from UserCreator import UserCreator
 from Meetings import MeetingCreator
 from UserLogin import UserLogin
-from UserInstance import UserInstance
+from Archive.UserInstance import UserInstance
 
 
 def run_demo1_1():  # Create Student Accounts

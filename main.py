@@ -3,14 +3,12 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
 from wtforms.fields import TimeField, HiddenField
-from datetime import datetime
 from UserCreator import UserCreator
 from UserLogin import UserLogin
 from db import db
 from Meetings import MeetingCreator, break_time
 from datetime import datetime, timedelta
-from bson import ObjectId
-from flask import jsonify
+
 
 
 def current_user_email():
@@ -45,32 +43,8 @@ def break_time(start_str, end_str, interval=30):
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'change-this-to-a-very-secret-key'
 
-# MOCK USER DB
-mock_users = {
-    'student@demo.com': {
-        'name': 'Lucas',
-        'role': 'Student'
-    },
-    'tutor@demo.com': {
-        'name': 'Bond',
-        'role': 'Tutor',
-        'availability': {'start': '09:00', 'end': '17:00'}
-    },
-    'smith@demo.com': {
-        'name': 'Smith',
-        'role': 'Tutor',
-        'availability': {'start': '10:00', 'end': '16:00'}
-    }
-}
 
-# MOCK APPOINTMENTS
-tutor_appointments = {
-    'Bond': [
-        {'date': '2025-07-15', 'time': '10:00'},
-        {'date': '2025-07-18', 'time': '13:00'}
-    ],
-    'Smith': []
-}
+
 
 
 @app.route('/demo_rate', methods=['GET', 'POST'])
@@ -190,9 +164,6 @@ def register():
                 form.password.data,
                 form.role.data
             )
-
-        # For tutors, default availability
-        # user = {'name': email.split('@')[0].capitalize(), 'role': role}
 
         if role == 'Tutor':
             success, message = creator.create_tutor_user(
